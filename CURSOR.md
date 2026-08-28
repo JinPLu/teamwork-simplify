@@ -43,13 +43,12 @@ not add a second implementation of any of them:
 - **Explore** and **AskQuestion** handle live search and batched questions
   directly; a question batch collects input and does not by itself create
   a document.
-- `.cursor/plans` remains the host editing surface. Accepted reusable
-  results persist under
-<!-- BEGIN GENERATED: kind-root -->
-`docs/teamwork/<kind>/`
-<!-- END GENERATED: kind-root -->
-  . If the User Rule above is absent, the project `AGENTS.md` block is the
-  minimum shared bridge.
+- `.cursor/plans` remains the host editing surface. After the user accepts
+  a reusable result, the project's own `AGENTS.md` Teamwork block owns when
+  that write fires, which of the four document kinds it belongs to, and the
+  path it reuses (see README.md's persistence sections); Root writes it
+  there. If the User Rule above is absent, the project `AGENTS.md` block is
+  still the minimum shared bridge.
 
 ## Roles and models
 

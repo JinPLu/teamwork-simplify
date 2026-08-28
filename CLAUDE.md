@@ -33,11 +33,10 @@ Teamwork does not add a second implementation of any of them:
   machine-local and is not Teamwork persistence.
 
 `AskUserQuestion` batches collect input and do not by themselves create a
-document. Accepted reusable results persist under
-<!-- BEGIN GENERATED: kind-root -->
-`docs/teamwork/<kind>/`
-<!-- END GENERATED: kind-root -->
-in the same response cycle the user accepts them.
+document. After the user accepts a reusable result, the project's own
+`AGENTS.md` Teamwork block owns when that write fires, which of the four
+document kinds it belongs to, and the path it reuses (see README.md's
+persistence sections); Root writes it in the same response cycle.
 
 ## Roles and models
 

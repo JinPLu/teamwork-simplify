@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -12,11 +13,14 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 
-sys.path.insert(0, str(ROOT / "scripts"))
-from teamwork_tooling import topology as teamwork_topology  # noqa: E402
-from teamwork_tooling.simple_yaml import load_simple_yaml  # noqa: E402
-
 KINDS = frozenset({"discussions", "plans", "records", "experiments"})
+# Plural checkpoint directory -> singular reference template stem.
+KIND_TEMPLATES = {
+    "discussions": "discussion",
+    "plans": "plan",
+    "records": "record",
+    "experiments": "experiment",
+}
 CURRENT_ROLES = ("challenger", "worker", "writer")
 
 # Retired Skills that must stay in scripts/install/common.sh's RETIRED_SKILLS
@@ -35,11 +39,11 @@ RETIRED_SKILL_NAMES = (
 # the matching Cursor/Codex sets) that this checkout no longer installs.
 RETIRED_ROLE_NAMES = ("researcher", "planner", "reviewer", "debugger")
 
+CODE_SPAN_RE = re.compile(r"`[^`]*`")
+
 
 class CoreFlowTests(unittest.TestCase):
-    # ---- small text helpers, mirrored from the retired replay-era file's
-    # non-replay helpers because they are still the right tool for reading
-    # frontmatter/sections; they assert nothing about behavior by themselves.
+    # ---- small text helpers; they assert nothing by themselves ----
 
     @staticmethod
     def _folded(text: str) -> str:
@@ -66,49 +70,64 @@ class CoreFlowTests(unittest.TestCase):
         body = text[start:end]
         return [item for item in body.split() if item]
 
-    # ---- 1. document kind closed set ----
+    def _load_script_module(self, name: str, relative: str):
+        spec = importlib.util.spec_from_file_location(name, ROOT / relative)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def _managed_block(self, label: str = "sample") -> str:
+        """The project AGENTS.md Teamwork block: the persistence contract's
+        single owner, read straight from the generator that writes it."""
+        module = self._load_script_module(
+            "init_project_files", "scripts/init-project-files.py"
+        )
+        return module.managed_block(label)
+
+    def _reference_templates(self) -> dict[str, Path]:
+        root = ROOT / "skills/teamwork-collaborate/references"
+        return {path.stem: path for path in sorted(root.glob("*.md"))}
+
+    # ---- 1. document kind closed set, owned by the project block ----
 
     def test_document_kind_set_is_closed(self) -> None:
-        facts = load_simple_yaml(ROOT / "config/teamwork-facts.yaml")
-        self.assertEqual(set(facts["kinds"]), KINDS)
-        self.assertEqual(len(facts["kinds"]), 4, "facts.yaml must name exactly four kinds")
+        block = self._managed_block()
 
-        architecture = (ROOT / "docs/architecture.md").read_text(encoding="utf-8")
-        folded_architecture = self._folded(architecture)
-        self.assertIn(
-            "The set is closed: nothing invents a fifth kind, and nothing "
-            "writes a checkpoint at the `docs/teamwork/` root.",
-            folded_architecture,
+        # Every backticked `<name>/` span in the block is a checkpoint kind;
+        # the set must be exactly the four, with no fifth invented anywhere.
+        named = re.findall(r"`([a-z]+)/`", block)
+        self.assertEqual(set(named), KINDS, named)
+        self.assertEqual(len(named), 4, named)
+
+        self.assertIn("docs/teamwork/<kind>/<slug>.md", block)
+        self.assertIn("The kind set is closed.", block)
+
+        # Cross-check: one reference template per kind, and nothing else.
+        self.assertEqual(
+            set(self._reference_templates()), set(KIND_TEMPLATES.values())
         )
-        self.assertIn("docs/teamwork/<kind>/<slug>.md", architecture)
 
-        agents_text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        block_start = agents_text.find("<!-- TEAMWORK_PROJECT_START -->")
-        self.assertGreaterEqual(block_start, 0, "AGENTS.md has no Teamwork project block")
-        block = agents_text[block_start:]
-        listed = re.search(r"one of ((?:`[a-z]+`,?\s*(?:or\s*)?)+)", block)
-        self.assertIsNotNone(listed, "AGENTS.md project block does not enumerate kinds")
-        found_in_agents = set(re.findall(r"`([a-z]+)`", listed.group(1)))
-        self.assertEqual(found_in_agents, KINDS)
-
-    # ---- 2. templates complete ----
+    # ---- 2. reference templates complete ----
 
     def test_document_templates_are_complete(self) -> None:
-        topology = json.loads((ROOT / "config/teamwork-topology.json").read_text(encoding="utf-8"))
-        documents = {row["name"]: row["path"] for row in topology["document_templates"]}
-        self.assertEqual(set(documents), {"discussion", "experiment", "plan", "record"})
-        for name, path in documents.items():
-            full = ROOT / path
-            self.assertTrue(full.is_file(), path)
-            template = full.read_text(encoding="utf-8")
-            self.assertTrue(template.startswith("---\n"), path)
-            end = template.find("\n---\n", 4)
-            self.assertGreater(end, 0, path)
-            frontmatter = template[4:end]
-            for key in ("status", "superseded-by", "created", "updated"):
-                self.assertIn(f"{key}:", frontmatter, f"{path} missing {key}")
-            self.assertIn("## History", template, path)
-            self.assertIn("Append only", template, path)
+        templates = self._reference_templates()
+        self.assertEqual(len(templates), 4, sorted(templates))
+        self.assertEqual(set(templates), set(KIND_TEMPLATES.values()))
+
+        for kind, stem in KIND_TEMPLATES.items():
+            with self.subTest(kind=kind):
+                path = templates[stem]
+                template = path.read_text(encoding="utf-8")
+                self.assertTrue(template.startswith("---\n"), path)
+                end = template.find("\n---\n", 4)
+                self.assertGreater(end, 0, path)
+                frontmatter = template[4:end]
+                for key in ("status", "superseded-by", "created", "updated"):
+                    self.assertIn(f"{key}:", frontmatter, f"{path} missing {key}")
+                self.assertIn("## History", template, path)
+                self.assertIn("Append only", template, path)
 
     # ---- 3. skill metadata minimal and unique ----
 
@@ -133,46 +152,106 @@ class CoreFlowTests(unittest.TestCase):
         self.assertEqual(meta["name"], "teamwork-collaborate")
         self.assertTrue(meta["description"].startswith("Use when"), meta["description"])
 
-    # ---- 4. persistence section covers the four kinds ----
+    # ---- 4. the persistence contract lives in the project block ----
 
-    def test_skill_persistence_section_covers_four_kinds(self) -> None:
-        skill = self._skill_text("teamwork-collaborate")
-        section = self._section_after(skill, "## Persistence")
-        folded = self._folded(section)
-        for kind, template_name in (
-            ("discussions", "discussion"),
-            ("plans", "plan"),
-            ("records", "record"),
-            ("experiments", "experiment"),
-        ):
+    def test_persistence_contract_is_owned_by_the_project_block(self) -> None:
+        block = self._managed_block()
+        folded_block = self._folded(block)
+
+        # (a) The block carries the whole contract: when a checkpoint fires,
+        # which kind it is, how identity is judged, and the document shape.
+        self.assertIn("docs/teamwork/<kind>/<slug>.md", folded_block)
+        self.assertIn("same response cycle", folded_block)
+        self.assertIn("An ordinary next action is not a checkpoint.", folded_block)
+
+        # Each kind carries its own identity criterion in its own clause.
+        clauses = re.split(r"(?=Write `[a-z]+/`)", block)
+        seen = set()
+        for clause in clauses:
+            match = re.match(r"Write `([a-z]+)/`", clause)
+            if match is None:
+                continue
+            kind = match.group(1)
+            seen.add(kind)
             with self.subTest(kind=kind):
-                self.assertIn(f"docs/teamwork/{kind}/<slug>.md", folded)
-                self.assertIn(f"references/{template_name}.md", folded)
-        self.assertEqual(section.count("Identity:"), 4)
-        self.assertEqual(section.count("Checkpoint:"), 4)
+                self.assertIn("its identity is", clause, kind)
+        self.assertEqual(seen, KINDS)
 
-    # ---- 5. rule ownership is single-sourced (the one required gate) ----
+        # Path reuse, current synthesis on top, append-only History below,
+        # and the user's own wording kept apart from the model's reading.
+        self.assertIn("The same identity reuses the same path.", folded_block)
+        self.assertIn("current synthesis at the top", folded_block)
+        self.assertIn("append-only dated History at the bottom", folded_block)
+        self.assertIn("original wording", folded_block)
+        self.assertIn("working understanding", folded_block)
 
-    def test_rule_ownership_is_single_sourced(self) -> None:
-        policy = ROOT / "policy/teamwork-global.md"
-        adapters = (ROOT / "CURSOR.md", ROOT / "CLAUDE.md", ROOT / "CODEX.md")
-        skills = tuple(sorted((ROOT / "skills").glob("*/SKILL.md")))
-        templates = tuple(sorted((ROOT / "templates").glob("*/*.md")))
-        architecture = ROOT / "docs/architecture.md"
-        others = adapters + skills + templates + (architecture,)
+        # Cross-check the separation against the template that carries it.
+        discussion = self._reference_templates()["discussion"].read_text(encoding="utf-8")
+        self.assertIn("## User quotes", discussion)
+        self.assertIn("## Working understanding", discussion)
 
-        owned = (
-            "read the affected produce-transform-consume path",
-            "One behavior, one path",
-            "Report stage results in natural Chinese",
-            "not a reason to add or keep it",
+        # (b) The Skill no longer defines any of it. Its Persistence section
+        # is a pointer: the project block plus the four template paths, with
+        # no kind directory, no path shape, and no identity rule of its own.
+        skill = self._skill_text("teamwork-collaborate")
+        self.assertNotIn("docs/teamwork/", skill)
+        for kind in KINDS:
+            self.assertNotIn(f"`{kind}/`", skill, kind)
+        section = self._folded(self._section_after(skill, "## Persistence"))
+        self.assertIn("`AGENTS.md`", section)
+        for stem in KIND_TEMPLATES.values():
+            self.assertIn(f"`references/{stem}.md`", section, stem)
+
+    # ---- 5. policy rules are not restated anywhere else ----
+
+    @staticmethod
+    def _prose_words(text: str) -> list[str]:
+        """Fold to a lowercase, punctuation-free word sequence. Inline code
+        spans are dropped first: `AGENTS.md` or `docs/teamwork/<kind>/` are
+        identifiers every file must be able to name, and naming the same
+        artifact is not restating a rule about it."""
+        return re.sub(r"[^a-z0-9]+", " ", CODE_SPAN_RE.sub(" ", text).lower()).split()
+
+    def test_policy_rules_are_not_restated_elsewhere(self) -> None:
+        # 8 words is the shortest window that separates "restates a policy
+        # rule" from "shares a few words". With code spans dropped, the
+        # longest legitimate prose overlap in this tree is 6 words ("after
+        # the user accepts a reusable" / "the project s own teamwork block"),
+        # both of which are shared subjects, not rules; the shortest actual
+        # rule sentence in the policy is far longer than 8 words, so a real
+        # restatement still trips this.
+        window = 8
+
+        policy_words = self._prose_words(
+            (ROOT / "policy/teamwork-global.md").read_text(encoding="utf-8")
         )
-        owner_text = self._folded(policy.read_text(encoding="utf-8"))
-        for fragment in owned:
-            self.assertIn(fragment.lower(), owner_text.lower(), fragment)
-            for path in others:
-                leaked = self._folded(path.read_text(encoding="utf-8"))
-                self.assertNotIn(fragment.lower(), leaked.lower(), f"{fragment!r} leaked into {path}")
+        self.assertGreater(len(policy_words), window)
+        grams = {
+            tuple(policy_words[i : i + window])
+            for i in range(len(policy_words) - window + 1)
+        }
+
+        others = (
+            tuple(sorted((ROOT / "skills").glob("*/SKILL.md")))
+            + tuple(sorted(p for p in (ROOT / "templates").glob("*/*") if p.is_file()))
+            + (ROOT / "CODEX.md", ROOT / "CURSOR.md", ROOT / "CLAUDE.md")
+        )
+        self.assertEqual(
+            len([p for p in others if p.parent.name.endswith("-agents")]), 9, others
+        )
+
+        for path in others:
+            words = self._prose_words(path.read_text(encoding="utf-8"))
+            echoes = sorted(
+                {
+                    " ".join(words[i : i + window])
+                    for i in range(len(words) - window + 1)
+                    if tuple(words[i : i + window]) in grams
+                }
+            )
+            self.assertEqual(
+                echoes, [], f"{path.relative_to(ROOT)} restates policy prose: {echoes}"
+            )
 
     # ---- 6. policy names the code prohibitions (word-list coverage only) ----
 
@@ -215,32 +294,57 @@ class CoreFlowTests(unittest.TestCase):
             self.assertIn(name, retired_cursor, name)
             self.assertIn(f"teamwork-{name}", retired_codex, name)
 
-        topology = json.loads((ROOT / "config/teamwork-topology.json").read_text(encoding="utf-8"))
-        current_roles = {row["name"] for row in topology["agents"]}
-        self.assertEqual(current_roles, set(CURRENT_ROLES))
         for role in CURRENT_ROLES:
             self.assertNotIn(role, retired_claude, role)
             self.assertNotIn(role, retired_cursor, role)
             self.assertNotIn(f"teamwork-{role}", retired_codex, role)
 
-    # ---- 8. topology and installer inventories agree ----
+    # ---- 8. installer inventories match what the checkout actually ships ----
 
-    def test_topology_and_installers_agree(self) -> None:
-        topology = json.loads((ROOT / "config/teamwork-topology.json").read_text(encoding="utf-8"))
-        for row in topology["public_skills"]:
-            self.assertTrue((ROOT / row["path"]).is_file(), row["path"])
+    def test_installer_inventories_match_the_checkout(self) -> None:
+        common_sh = (ROOT / "scripts/install/common.sh").read_text(encoding="utf-8")
 
-        template_paths = []
-        for row in topology["agents"]:
-            self.assertEqual(set(row["templates"]), {"codex", "cursor", "claude"})
-            template_paths.extend(row["templates"].values())
-        self.assertEqual(len(template_paths), 9, template_paths)
-        for path in template_paths:
-            self.assertTrue((ROOT / path).is_file(), path)
+        shipped_skills = {path.parent.name for path in (ROOT / "skills").glob("*/SKILL.md")}
+        self.assertEqual(shipped_skills, {"teamwork-collaborate"})
+        for name in ("SKILLS", "CURSOR_SKILLS", "CLAUDE_SKILLS", "CODEX_SKILLS"):
+            with self.subTest(array=name):
+                self.assertEqual(set(self._parse_bash_array(common_sh, name)), shipped_skills)
 
-        for host in ("codex", "cursor", "claude"):
-            roles = set(teamwork_topology.host_role_paths(ROOT)[host])
-            self.assertEqual(roles, set(CURRENT_ROLES), host)
+        role_templates = {
+            "claude": sorted((ROOT / "templates/claude-agents").glob("*.md")),
+            "cursor": sorted((ROOT / "templates/cursor-agents").glob("*.md")),
+            "codex": sorted((ROOT / "templates/codex-agents").glob("*.toml")),
+        }
+        self.assertEqual(sum(len(paths) for paths in role_templates.values()), 9, role_templates)
+        for host, paths in role_templates.items():
+            with self.subTest(host=host):
+                self.assertEqual(len(paths), 3, paths)
+                for path in paths:
+                    self.assertTrue(path.is_file(), path)
+
+        self.assertEqual(
+            {path.stem for path in role_templates["claude"]}, set(CURRENT_ROLES)
+        )
+        self.assertEqual(
+            {path.stem for path in role_templates["cursor"]}, set(CURRENT_ROLES)
+        )
+        self.assertEqual(
+            {path.stem for path in role_templates["codex"]},
+            {f"teamwork-{role}" for role in CURRENT_ROLES},
+        )
+
+        self.assertEqual(
+            set(self._parse_bash_array(common_sh, "CLAUDE_AGENTS")),
+            {path.stem for path in role_templates["claude"]},
+        )
+        self.assertEqual(
+            set(self._parse_bash_array(common_sh, "CURSOR_AGENTS")),
+            {path.stem for path in role_templates["cursor"]},
+        )
+        self.assertEqual(
+            set(self._parse_bash_array(common_sh, "CODEX_AGENTS")),
+            {path.stem for path in role_templates["codex"]},
+        )
 
     # ---- 9. real install + marker readback, temp HOME only ----
 
@@ -273,7 +377,7 @@ class CoreFlowTests(unittest.TestCase):
                     "Plan mode is a read-only permission boundary",
                     "AskUserQuestion batches collect input",
                     "acceptance of a reusable plan",
-                    "apply the matching Persistence contract",
+                    "the project's own AGENTS.md Teamwork block specifies",
                     "`~/.claude/plans/` is a machine-local",
                     "not Teamwork persistence",
                 ),
@@ -354,10 +458,7 @@ class CoreFlowTests(unittest.TestCase):
             )
             self.assertEqual(init.returncode, 0, init.stderr)
             agents = (project / "AGENTS.md").read_text(encoding="utf-8")
-            self.assertIn(
-                "User-accepted reusable results live under `docs/teamwork/<kind>/`",
-                agents,
-            )
+            self.assertIn(self._managed_block("proj"), agents)
             bridge = (project / "CLAUDE.md").read_text(encoding="utf-8")
             self.assertEqual(bridge.count("<!-- TEAMWORK_CLAUDE_BRIDGE_START -->"), 1)
             self.assertIn("@AGENTS.md", bridge)
@@ -435,11 +536,7 @@ class CoreFlowTests(unittest.TestCase):
 
             self.assertEqual(first_agents, second_agents)
             self.assertEqual(second_agents.count("<!-- TEAMWORK_PROJECT_START -->"), 1)
-            self.assertIn("no required project-local workflow or state", second_agents)
-            self.assertIn(
-                "User-accepted reusable results live under `docs/teamwork/<kind>/`",
-                second_agents,
-            )
+            self.assertIn(self._managed_block(project.name), second_agents)
             bridge = (project / "CLAUDE.md").read_text(encoding="utf-8")
             self.assertEqual(bridge.count("<!-- TEAMWORK_CLAUDE_BRIDGE_START -->"), 1)
             self.assertEqual(bridge.count("<!-- TEAMWORK_CLAUDE_BRIDGE_END -->"), 1)
@@ -488,21 +585,10 @@ class CoreFlowTests(unittest.TestCase):
 
     # ---- 12. source pointer schema and host merge ----
 
-    def _load_pointer_module(self):
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location(
-            "write_source_pointer",
-            ROOT / "scripts/write-source-pointer.py",
-        )
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
-
     def test_source_pointer_schema_and_host_merge(self) -> None:
-        module = self._load_pointer_module()
+        module = self._load_script_module(
+            "write_source_pointer", "scripts/write-source-pointer.py"
+        )
         check = subprocess.run(
             [sys.executable, str(ROOT / "scripts/write-source-pointer.py"), "check"],
             text=True,
@@ -555,7 +641,30 @@ class CoreFlowTests(unittest.TestCase):
             self.assertEqual(status.returncode, 0, status.stderr)
             self.assertEqual(status.stdout.strip(), "valid")
 
-    # ---- 13. schema/index/migration/notification runtime remain absent ----
+    # ---- 13. public docs name the source pointer and omit plugin install ----
+
+    def test_public_docs_name_source_pointer_and_omit_plugin_install(self) -> None:
+        checked = {
+            name: (ROOT / name).read_text(encoding="utf-8")
+            for name in ("README.md", "CODEX.md", "CURSOR.md", "CLAUDE.md")
+        }
+        for name, text in checked.items():
+            self.assertNotIn("plugin", text.lower(), name)
+
+        self.assertIn("~/.teamwork/install.json", checked["README.md"])
+        self.assertIn("~/.teamwork/install.json", checked["CODEX.md"])
+        self.assertIn("./install.sh codex", checked["README.md"])
+
+        check = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/write-source-pointer.py"), "check"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(check.returncode, 0, check.stderr)
+
+    # ---- 14. schema/index/migration/notification runtime remain absent ----
 
     def test_schema_index_and_migration_runtime_remain_absent(self) -> None:
         retired_paths = (
@@ -564,29 +673,34 @@ class CoreFlowTests(unittest.TestCase):
             "scripts/teamwork-documents-schema.json",
             "scripts/check-update.sh",
             "docs/teamwork/experiments/LEDGER.md",
+            # Removed with the derived-inventory scaffolding; must not return.
+            "scripts/teamwork-index.py",
+            "scripts/render-teamwork-facts.py",
+            "scripts/teamwork_tooling",
+            "config/teamwork-topology.json",
+            "config/teamwork-facts.yaml",
         )
         for path in retired_paths:
             self.assertFalse((ROOT / path).exists(), path)
 
-        # Scan the mechanism surfaces only: code, config, skills, templates,
-        # policy, and the top-level adapter docs. docs/teamwork/ holds
-        # accepted discussion/plan/record/experiment documents, which may
-        # legitimately discuss a retired concept historically (for example
-        # the record of the decision to drop the LEDGER); that is not a live
-        # mechanism and is out of scope for this check.
+        # Scan the mechanism surfaces only: code, skills, templates, policy,
+        # and the top-level public docs. docs/teamwork/ holds accepted
+        # discussion/plan/record/experiment documents, which may legitimately
+        # discuss a retired concept historically (for example the record of
+        # the decision to drop the LEDGER, or the plan that removed the
+        # derived-inventory scripts); that is not a live mechanism and is out
+        # of scope for this check.
         mechanism_roots = (
             ROOT / "scripts",
-            ROOT / "config",
             ROOT / "skills",
             ROOT / "templates",
             ROOT / "policy",
             ROOT / "install.sh",
-            ROOT / "docs/architecture.md",
             ROOT / "README.md",
-            ROOT / "README.en.md",
             ROOT / "CODEX.md",
             ROOT / "CLAUDE.md",
             ROOT / "CURSOR.md",
+            ROOT / "CONTRIBUTING.md",
             ROOT / "AGENTS.md",
         )
         all_text = ""
@@ -595,7 +709,7 @@ class CoreFlowTests(unittest.TestCase):
             for path in candidates:
                 if "scripts/tests" in path.as_posix() or "__pycache__" in path.parts:
                     continue
-                if path.is_file() and path.suffix in {".py", ".sh", ".json", ".md"}:
+                if path.is_file() and path.suffix in {".py", ".sh", ".json", ".md", ".yaml", ".toml"}:
                     try:
                         all_text += path.read_text(encoding="utf-8")
                     except UnicodeDecodeError:
@@ -604,6 +718,14 @@ class CoreFlowTests(unittest.TestCase):
         self.assertNotIn("cursor_skills", all_text)
         self.assertNotIn("codex_routing", all_text.lower().replace("-", "_"))
         self.assertNotIn("check-update.sh", all_text)
+        for gone in (
+            "teamwork-index",
+            "render-teamwork-facts",
+            "teamwork-topology",
+            "teamwork-facts",
+            "teamwork_tooling",
+        ):
+            self.assertNotIn(gone, all_text, gone)
 
 
 if __name__ == "__main__":

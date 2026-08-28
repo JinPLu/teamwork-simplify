@@ -11,34 +11,10 @@ PKG_VERSION="unknown"
 if [[ -f "$ROOT/VERSION" ]]; then
   PKG_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 fi
-TOPOLOGY_QUERY="$ROOT/scripts/teamwork_tooling/topology.py"
-python3 "$TOPOLOGY_QUERY" --root "$ROOT" skills >/dev/null || {
-  echo "Cannot load Teamwork topology: $ROOT/config/teamwork-topology.json" >&2
-  return 1 2>/dev/null || exit 1
-}
-for _teamwork_skill_host in cursor claude codex; do
-  python3 "$TOPOLOGY_QUERY" --root "$ROOT" skills --host "$_teamwork_skill_host" >/dev/null || {
-    echo "Cannot load Teamwork topology: $ROOT/config/teamwork-topology.json" >&2
-    return 1 2>/dev/null || exit 1
-  }
-done
-unset _teamwork_skill_host
-SKILLS=()
-while IFS= read -r item; do
-  SKILLS+=("$item")
-done < <(python3 "$TOPOLOGY_QUERY" --root "$ROOT" skills)
-CURSOR_SKILLS=()
-CLAUDE_SKILLS=()
-CODEX_SKILLS=()
-while IFS= read -r item; do
-  CURSOR_SKILLS+=("$item")
-done < <(python3 "$TOPOLOGY_QUERY" --root "$ROOT" skills --host cursor)
-while IFS= read -r item; do
-  CLAUDE_SKILLS+=("$item")
-done < <(python3 "$TOPOLOGY_QUERY" --root "$ROOT" skills --host claude)
-while IFS= read -r item; do
-  CODEX_SKILLS+=("$item")
-done < <(python3 "$TOPOLOGY_QUERY" --root "$ROOT" skills --host codex)
+SKILLS=(teamwork-collaborate)
+CURSOR_SKILLS=(teamwork-collaborate)
+CLAUDE_SKILLS=(teamwork-collaborate)
+CODEX_SKILLS=(teamwork-collaborate)
 RETIRED_SKILLS=(
   grill-me
   teamwork-design
@@ -55,18 +31,9 @@ RETIRED_SKILLS=(
   teamwork-update
 )
 LEGACY_CODEX_ROUTER_SKILL="teamwork"
-CLAUDE_AGENTS=()
-CURSOR_AGENTS=()
-CODEX_AGENTS=()
-while IFS= read -r item; do
-  CLAUDE_AGENTS+=("$item")
-done < <(python3 "$TOPOLOGY_QUERY" --root "$ROOT" agent-templates --host claude --field name)
-while IFS= read -r item; do
-  CURSOR_AGENTS+=("$item")
-done < <(python3 "$TOPOLOGY_QUERY" --root "$ROOT" agent-templates --host cursor --field name)
-while IFS= read -r item; do
-  CODEX_AGENTS+=("$item")
-done < <(python3 "$TOPOLOGY_QUERY" --root "$ROOT" agent-templates --host codex --field stem)
+CLAUDE_AGENTS=(challenger worker writer)
+CURSOR_AGENTS=(challenger worker writer)
+CODEX_AGENTS=(teamwork-challenger teamwork-worker teamwork-writer)
 RETIRED_CLAUDE_AGENTS=(designer plan-reviewer explorer researcher planner reviewer debugger)
 RETIRED_CURSOR_AGENTS=(designer plan-reviewer explorer debugger researcher planner reviewer)
 RETIRED_CODEX_AGENTS=(teamwork-designer teamwork-plan-reviewer teamwork-researcher teamwork-planner teamwork-reviewer teamwork-debugger teamwork-explorer)

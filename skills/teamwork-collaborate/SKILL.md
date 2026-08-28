@@ -36,44 +36,29 @@ re-asked at a handoff into a separate planning step.
    thread without re-asking settled constraints: verify project facts and
    observable acceptance, inspect the actual owners, interfaces,
    dependencies, and nearest available verification, and order outcome-sized
-   work by dependency, naming what each step produces. The first executable
-   step must change the target artifact or remove an observed blocker.
-   Benchmarks, appendices, probes, and extra documents are not prerequisites
-   just because they would help explain something.
-6. Split parallel lines only when they are genuinely independent with
-   non-overlapping owned scope. Give each line one Worker handoff carrying
-   the delegation fields the global policy defines, where this line's owned
-   scope is a set of paths disjoint from every other line's. Do not split
-   work that is not independent.
-7. Root integrates each Worker's return, verifies it on the real path, and
-   then reports. A Worker's return is not itself verification.
+   work by dependency, naming what each step produces. Benchmarks,
+   appendices, probes, and extra documents are not prerequisites just because
+   they would help explain something.
+6. Split parallel lines only when they are genuinely independent: each line's
+   owned scope is a set of paths disjoint from every other line's. That
+   invariant, plus the delegation fields the global policy defines, is what
+   the split has to carry — not any particular vehicle. Dispatch each line
+   through whatever independent-execution surface this host offers, naming it
+   in the host's own terms; the optional Worker role is the fallback when the
+   host has none. Do not split work that is not independent.
+7. Root integrates each returned line and verifies it on the real path before
+   reporting.
 8. End with the decision, the unresolved points, and the next authorized
    action. When the direction is decided and the user authorizes execution,
-   the discussion ends at that real action; do not open a new evidence gate
-   or a new planning gate.
+   the discussion ends at that real action.
 
 ## Persistence
 
-When a listed checkpoint fires, write in the same response cycle. If
-separate stable identities each cross a checkpoint, write each to its own
-path. Keep the user's original wording separate from the working
-understanding. An ordinary next action by itself does not fire a checkpoint.
-Root writes the checkpoint from the template below; an optional Writer may
-carry out that write when doing so does not delay it, and never decides
-document identity or what counts as material.
-
-- `docs/teamwork/discussions/<slug>.md`, from `references/discussion.md`.
-  Identity: the same final goal plus the same subject. Checkpoint: a
-  decision, recommendation, or unresolved-question batch that will change
-  later work.
-- `docs/teamwork/plans/<slug>.md`, from `references/plan.md`. Identity: the
-  same selected outcome. Checkpoint: the direction and scope are accepted,
-  the first executable plan is accepted, or a material replan is accepted.
-  Later edits reuse the same path; an added acceptance check or parallel
-  concern does not open a new plan.
-- `docs/teamwork/records/<slug>.md`, from `references/record.md`. Identity:
-  the same continuing objective. Checkpoint: a result, conclusion, or
-  blocker that later sessions can reuse.
-- `docs/teamwork/experiments/<slug>.md`, from `references/experiment.md`.
-  Identity: the same experiment. Checkpoint: the experiment has a result or
-  a conclusion.
+The project's own `AGENTS.md` Teamwork block owns when a checkpoint fires,
+which of the four kinds it belongs to, how identity is judged, and the path
+it reuses. Follow that block; do not restate or override it here. When a
+checkpoint fires while this Skill is loaded, fill the matching template —
+`references/discussion.md`, `references/plan.md`, `references/record.md`, or
+`references/experiment.md` — and write it in the same response cycle. An
+optional Writer may carry out that write when doing so does not delay it,
+and never decides document identity or what counts as material.

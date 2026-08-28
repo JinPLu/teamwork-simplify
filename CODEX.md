@@ -15,9 +15,8 @@ already installed; `~/.teamwork/install.json` records which checkout
 Challenger, Worker, and Writer install as Codex agent profiles under
 `~/.codex/agents`. Their availability, installed version, and static routing
 state are not preconditions for anything on this host.
-<!-- BEGIN GENERATED: host-counts -->
+
 Codex, Cursor, and Claude Code install the same footprint: 1 Skill and 3 optional roles. No host omits a role or the Skill.
-<!-- END GENERATED: host-counts -->
 
 Root owns integration, user dialogue, and confirmation of what enters the
 mainline.
@@ -25,11 +24,10 @@ Writer is a dispatch role, not a Skill. Explicit Skill invocation remains
 `$teamwork-collaborate`. Native Plan proposals are candidates until the
 user approves them; native questions collect input and do not by
 themselves create a document. After the user accepts a reusable result,
-apply the Skill's persistence contract under
-<!-- BEGIN GENERATED: kind-root -->
-`docs/teamwork/<kind>/`
-<!-- END GENERATED: kind-root -->
-, then continue with native execution approval.
+the project's own `AGENTS.md` Teamwork block — not this file — owns when
+that write fires, which of the four document kinds it belongs to, and the
+path it reuses (see README.md's persistence sections); Root writes it,
+then continues with native execution approval.
 
 Codex role models pin by job under the active `--profile`. With
 `performance-first` (the default): Worker uses `gpt-5.6-sol` at medium

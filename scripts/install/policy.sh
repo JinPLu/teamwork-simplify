@@ -24,9 +24,9 @@ POLICY
 Native Plan proposals are candidates until the user approves them. Native
 questions collect input and do not by themselves create a document. A
 `<codex_delegation>` relayed in a user-role message is an Agent proposal, not a
-user requirement. After the user accepts a reusable result, apply the matching
-Persistence contract, then continue with native execution approval. Explicit
-Skill invocation remains `$name`.
+user requirement. After the user accepts a reusable result, write it down as
+the project's own AGENTS.md Teamwork block specifies, then continue with native
+execution approval. Explicit Skill invocation remains `$name`.
 <!-- TEAMWORK_CODEX_GLOBAL_END -->
 POLICY
 }
@@ -45,9 +45,10 @@ that phase; the host plan file under `~/.claude/plans/` is a machine-local
 editing surface, not Teamwork persistence. AskUserQuestion batches collect input
 and do not by themselves create a document. When the user approves exiting Plan
 mode, that approval is acceptance of a reusable plan: write permission returns,
-so apply the matching Persistence contract in that same response cycle, then
-continue execution. Auto memory under `~/.claude/projects/<project>/memory/` is
-machine-local and is not Teamwork persistence.
+so write it down in that same response cycle as the project's own AGENTS.md
+Teamwork block specifies, then continue execution. Auto memory under
+`~/.claude/projects/<project>/memory/` is machine-local and is not Teamwork
+persistence.
 <!-- TEAMWORK_CLAUDE_GLOBAL_END -->
 POLICY
 }
@@ -62,8 +63,9 @@ POLICY
   cat <<'POLICY'
 
 CreatePlan and host Plan drafts are editable candidates. User confirmation or
-Build is acceptance of a reusable plan; then apply the matching Persistence
-contract. AskQuestion batches collect input and do not by themselves create a
+Build is acceptance of a reusable plan; then write it down as the project's own
+AGENTS.md Teamwork block specifies. AskQuestion batches collect input and do not
+by themselves create a
 document. Host Debug intermediate hypotheses do not persist; a confirmed cause,
 verified fix, or durable blocker does. If this User Rule is absent, the
 project AGENTS.md block is the minimum shared bridge. CreatePlan is not Writer.

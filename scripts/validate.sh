@@ -14,13 +14,11 @@ fi
 bash -n "$ROOT/install.sh" \
   "$ROOT/scripts/init-project.sh" "$ROOT/scripts/install/"*.sh
 
-python3 -m json.tool "$ROOT/config/teamwork-topology.json" >/dev/null
 PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/plugin-runtime-root.py" >/dev/null
 PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/write-source-pointer.py" check
 
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest \
-  scripts.tests.test_core_flow scripts.tests.test_teamwork_docs
-PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/render-teamwork-facts.py" --check
+  scripts.tests.test_core_flow
 
 if [[ "$MODE" == release ]]; then
   python3 - "$ROOT" <<'PY'

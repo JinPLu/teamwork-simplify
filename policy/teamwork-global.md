@@ -47,6 +47,6 @@
   objective, owned scope, settled constraints, available evidence, requested
   return. A missing optional role does not block native work. After the user
   accepts a reusable semantic result — a plan, decision, diagnosis,
-  conclusion, or verdict — apply the matching Persistence even without
-  explicit invocation; persistence follows the visible result and does not
-  replace the next real action.
+  conclusion, or verdict — write it down as the project's own `AGENTS.md`
+  Teamwork block specifies, even without explicit invocation; persistence
+  follows the visible result and does not replace the next real action.
