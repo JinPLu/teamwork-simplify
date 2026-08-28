@@ -39,13 +39,15 @@ re-asked at a handoff into a separate planning step.
    work by dependency, naming what each step produces. Benchmarks,
    appendices, probes, and extra documents are not prerequisites just because
    they would help explain something.
-6. Split parallel lines only when they are genuinely independent: each line's
-   owned scope is a set of paths disjoint from every other line's. That
-   invariant, plus the delegation fields the global policy defines, is what
-   the split has to carry — not any particular vehicle. Dispatch each line
-   through whatever independent-execution surface this host offers, naming it
-   in the host's own terms; the optional Worker role is the fallback when the
-   host has none. Do not split work that is not independent.
+6. State the split verdict for that ordered work, always: whether two or more
+   steps have no ordering dependency on each other and owned scopes — sets of
+   paths — that are disjoint. When they do, split those lines, carry the
+   delegation fields the global policy defines, and dispatch each line through
+   this host's own independent-execution surface, named in the host's own
+   terms; the optional Worker role is the fallback when the host offers none.
+   When they do not, name the dependency or the shared path that prevents it.
+   Never leave the verdict unstated, and never split work that is not
+   independent.
 7. Root integrates each returned line and verifies it on the real path before
    reporting.
 8. End with the decision, the unresolved points, and the next authorized

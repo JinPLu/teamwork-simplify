@@ -51,6 +51,13 @@ not add a second implementation of any of them:
   the User Rule above is absent, the project `AGENTS.md` block is still the
   minimum shared bridge.
 
+## Parallel execution surface
+
+`cursor-agent --help` exposes no fan-out subcommand either. As on Codex, an
+independent line is carried by dispatching the installed role agents under
+`~/.cursor/agents`, one per line, so Worker is the primary vehicle here
+rather than a fallback.
+
 ## Roles and models
 
 Cursor roles pin `model` by job; `--profile` does not apply to Cursor and

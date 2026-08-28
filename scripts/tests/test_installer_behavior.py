@@ -14,6 +14,8 @@ from harness import (  # noqa: E402
     CLAUDE_POLICY_START,
     CODEX_POLICY_END,
     CODEX_POLICY_START,
+    CURSOR_POLICY_END,
+    CURSOR_POLICY_START,
     POINTER_RELATIVE,
     TeamworkCase,
     digest,
@@ -265,6 +267,80 @@ class UpdateTests(TeamworkCase):
         done = self.install("update")
         self.assertNotEqual(done.returncode, 0, done.stdout)
         self.assertEqual(snapshot(self.home), {})
+
+
+class CrossHostParityTests(TeamworkCase):
+    """The same Skill and the same role contracts must land on every host.
+
+    Each host has its own skill root, its own agent format, and its own policy
+    wrapper. What must not vary is the method itself: one host quietly shipping
+    a different SKILL.md or a differently-worded role contract is a silent
+    fork of the product, and nothing else in this suite would notice.
+    """
+
+    SKILL_ROOTS = {
+        "claude": ".claude/skills",
+        "codex": ".agents/skills",
+        "cursor": ".cursor/skills",
+    }
+    MARKDOWN_AGENT_ROOTS = {"claude": ".claude/agents", "cursor": ".cursor/agents"}
+    ROLES = ("challenger", "worker", "writer")
+
+    def install_every_host(self) -> None:
+        self.install_ok("codex")
+        self.install_ok("claude")
+        self.install_ok("cursor")
+
+    def test_every_host_receives_the_same_skill_tree(self) -> None:
+        self.install_every_host()
+
+        trees = {
+            host: snapshot(self.home / relative / "teamwork-collaborate")
+            for host, relative in self.SKILL_ROOTS.items()
+        }
+        for tree in trees.values():
+            self.assertIn("SKILL.md", tree, f"a host installed no SKILL.md: {trees}")
+        reference = trees["claude"]
+        for host, tree in trees.items():
+            self.assertEqual(tree, reference, f"{host} skill tree differs from claude")
+
+    def test_markdown_hosts_share_one_body_per_role(self) -> None:
+        self.install_every_host()
+
+        for role in self.ROLES:
+            bodies = {}
+            for host, relative in self.MARKDOWN_AGENT_ROOTS.items():
+                path = self.home / relative / f"{role}.md"
+                self.assertTrue(path.is_file(), f"{host} installed no {role}")
+                _, _, body = path.read_text(encoding="utf-8").split("---\n", 2)
+                bodies[host] = body
+            self.assertEqual(
+                bodies["cursor"],
+                bodies["claude"],
+                f"{role} carries a different contract on cursor than on claude",
+            )
+
+    def test_each_host_policy_block_carries_the_same_shared_body(self) -> None:
+        self.install_every_host()
+        source = (Path(__file__).resolve().parents[2] / "policy" / "teamwork-global.md").read_text(
+            encoding="utf-8"
+        )
+
+        claude_text = (self.home / ".claude" / "CLAUDE.md").read_text(encoding="utf-8")
+        _, claude_block, _ = split_managed(claude_text, CLAUDE_POLICY_START, CLAUDE_POLICY_END)
+        codex_text = (self.home / ".codex" / "AGENTS.md").read_text(encoding="utf-8")
+        _, codex_block, _ = split_managed(codex_text, CODEX_POLICY_START, CODEX_POLICY_END)
+        cursor_stdout = self.install_ok("cursor-policy").stdout
+        _, cursor_block, _ = split_managed(
+            cursor_stdout, CURSOR_POLICY_START, CURSOR_POLICY_END
+        )
+
+        for host, block in (
+            ("claude", claude_block),
+            ("codex", codex_block),
+            ("cursor", cursor_block),
+        ):
+            self.assertIn(source, block, f"{host} policy block does not carry the shared body")
 
 
 class CommandLineTests(TeamworkCase):

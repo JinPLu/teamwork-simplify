@@ -39,6 +39,13 @@ effort, Writer uses `gpt-5.6-luna` at high effort, Challenger uses
 `gpt-5.6-sol` at high effort. With `--cost-first`, all three pin
 `gpt-5.6-luna` at high effort.
 
+## Parallel execution surface
+
+`codex --help` (0.147.0) exposes no native fan-out subcommand — no workflow
+loop, no parallel-agent harness. On this host an independent line is carried
+by the installed Worker profile under `~/.codex/agents`, one dispatch per
+line, which makes Worker the primary vehicle here rather than a fallback.
+
 Project setup adds only one managed block to `AGENTS.md`:
 
 ```bash

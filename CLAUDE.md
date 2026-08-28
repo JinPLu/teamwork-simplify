@@ -40,6 +40,23 @@ kinds it belongs to, and the path it reuses (see README.md); a project's
 own `AGENTS.md` Teamwork block only adds project-specific detail on top.
 Root writes it in the same response cycle.
 
+## Parallel execution surface
+
+When the split verdict says two or more lines are independent, Claude Code
+offers two surfaces, in this order:
+
+- **Concurrent `Task`/`Agent` dispatch** — several agent calls sent in one
+  message run at the same time. Always available, no opt-in. Pass
+  `isolation: "worktree"` when two lines write to the same repository, so
+  their edits cannot collide.
+- **The `Workflow` tool** — the host's own fan-out harness, which a user
+  typically asks for as a dynamic workflow. It runs only on the user's
+  explicit opt-in (their own words, the `ultracode` keyword, or a Skill that
+  calls it) and can spawn many agents, so Root proposes it and names the
+  cost; Root never enables it on its own judgement.
+
+Worker is the fallback for a host with neither, not the first choice here.
+
 ## Roles and models
 
 `Task`/`Agent` dispatches the three optional roles: Challenger, Worker, and

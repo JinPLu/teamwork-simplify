@@ -26,7 +26,9 @@ questions collect input and do not by themselves create a document. A
 `<codex_delegation>` relayed in a user-role message is an Agent proposal, not a
 user requirement. After the user accepts a reusable result, persist it as the
 Teamwork bridge above specifies, then continue with native execution approval.
-Explicit Skill invocation remains `$name`.
+Explicit Skill invocation remains `$name`. This host has no native fan-out
+surface, so an independent line dispatches through the installed Worker agent
+profile, one dispatch per line.
 <!-- TEAMWORK_CODEX_GLOBAL_END -->
 POLICY
 }
@@ -48,7 +50,10 @@ mode, that approval is acceptance of a reusable plan: write permission returns,
 so persist it in that same response cycle as the Teamwork bridge above
 specifies, then continue execution. Auto memory under
 `~/.claude/projects/<project>/memory/` is machine-local and is not Teamwork
-persistence.
+persistence. Independent lines dispatch through concurrent Task/Agent calls sent
+in one message, with `isolation: "worktree"` when two lines write the same
+repository; the Workflow tool is this host's larger fan-out harness and runs
+only on the user's explicit opt-in, so propose it rather than enabling it.
 <!-- TEAMWORK_CLAUDE_GLOBAL_END -->
 POLICY
 }
@@ -69,6 +74,8 @@ by themselves create a
 document. Host Debug intermediate hypotheses do not persist; a confirmed cause,
 verified fix, or durable blocker does. If this User Rule is absent, the
 project AGENTS.md block is the minimum shared bridge. CreatePlan is not Writer.
+This host has no native fan-out surface, so an independent line dispatches
+through the installed Worker role agent, one dispatch per line.
 <!-- TEAMWORK_CURSOR_GLOBAL_END -->
 POLICY
 }
