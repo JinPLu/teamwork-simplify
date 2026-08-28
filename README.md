@@ -54,7 +54,7 @@ Teamwork 把规则分放进三个物理上不同的层，原因不是风格选�
 ## 一分钟安装
 
 ```bash
-git clone <this-repository-url>
+git clone https://github.com/JinPLu/teamwork-simplify.git
 cd teamwork-simplify
 ./install.sh claude   # 或 codex / cursor-policy
 ```
