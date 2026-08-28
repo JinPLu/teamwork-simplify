@@ -11,6 +11,8 @@ updated: <YYYY-MM-DD>
 
 <one falsifiable sentence>
 
+- Subject identity: <the claim under test plus the setup below>
+
 ## Setup
 
 - Data: <dataset>

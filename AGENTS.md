@@ -12,16 +12,17 @@ surfaces and never block Codex work.
   Public docs stay outcome-focused; they do not restate the method.
 - `policy/teamwork-global.md` exclusively owns cross-project working rules
   that must hold before the Skill loads, plus the minimum routing,
-  delegation, and persistence bridge. A rule the Skill body already carries
-  does not belong there. Do not duplicate a policy rule inside the Skill
-  body, a role template (`templates/*-agents/`), a test, or a host adapter
-  doc (`CODEX.md` / `CURSOR.md` / `CLAUDE.md`) — those may name host tools
-  and installer mechanics, but the working rule itself lives only in
-  `policy/teamwork-global.md`. `README.md` owns the two-layer split's
-  rationale, the closed document-kind set, and the path shape; those
-  details do not belong in the global policy either. Commit a change to
-  that file separately from a release commit, carrying only the edits
-  needed to keep the tree green.
+  delegation, and the full persistence contract (when a checkpoint fires,
+  kind priority and identity, path reuse, and document shape). A rule the
+  Skill body already carries does not belong there. Do not duplicate a
+  policy rule inside the Skill body, a role template (`templates/*-agents/`),
+  a test, or a host adapter doc (`CODEX.md` / `CURSOR.md` / `CLAUDE.md`) —
+  those may name host tools and installer mechanics, but the working rule
+  itself lives only in `policy/teamwork-global.md`. `README.md` owns the
+  three-layer split's rationale; it points at the policy-owned persistence
+  contract rather than restating the closed document-kind set or the path
+  shape. Commit a change to that file separately from a release commit,
+  carrying only the edits needed to keep the tree green.
 - Shell scripts use Bash with `set -euo pipefail`, quoted variables, and
   arrays. `skills/teamwork-collaborate/SKILL.md` frontmatter has only `name`
   and `description`, and `description` starts with `Use when`.
@@ -56,7 +57,5 @@ surfaces and never block Codex work.
 
 - Project label: `teamwork-simplify`.
 - Teamwork adds no required project-local workflow or state. It creates no empty directory, schema, or mandatory stage chain. Native host modes stay in charge. Follow this project's normal instructions and invoke a named Skill only when its trigger matches.
-- When the user accepts a reusable semantic result, write it to `docs/teamwork/<kind>/<slug>.md` in the same response cycle, whether or not a Skill was named. Chat, host plans, and todos are not cross-session memory. An ordinary next action is not a checkpoint.
-- The kind set is closed. Write `discussions/` when a decision, recommendation, or unresolved-question batch will change later work; its identity is the final goal plus the subject. Write `plans/` when the direction and scope, the first executable plan, or a material replan is accepted; its identity is the selected outcome. Write `records/` when a result, conclusion, or blocker can be reused by a later session; its identity is the continuing objective. Write `experiments/` when one trial has a result or a conclusion; its identity is that experiment.
-- The same identity reuses the same path. Each document keeps the current synthesis at the top and an append-only dated History at the bottom; a correction is a new entry, never a rewrite. Keep the user's original wording separate from your working understanding.
+- This project's Teamwork persistence root is `docs/teamwork/` at the repository root; the global policy's Teamwork bridge owns the contract itself, and this block only adds project-specific detail.
 <!-- TEAMWORK_PROJECT_END -->

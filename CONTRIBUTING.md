@@ -20,10 +20,12 @@ Only explicit release preparation uses:
 ./scripts/validate.sh --release
 ```
 
-Cross-project working rules belong only in `policy/teamwork-global.md`; do
-not duplicate them in the Skill body, role templates, tests, or host
-adapter docs (`CODEX.md`, `CURSOR.md`, `CLAUDE.md`), which may name host
-tools and installer mechanics but not restate a working rule. `README.md`
-owns why the standing-policy, on-demand-Skill, and project layers stay
-separate, the closed document-kind set, and the path shape; those details
-do not belong in the global policy either.
+Cross-project working rules — including the full persistence contract
+(when a checkpoint fires, kind priority and identity, path reuse, and
+document shape) — belong only in `policy/teamwork-global.md`; do not
+duplicate them in the Skill body, role templates, tests, or host adapter
+docs (`CODEX.md`, `CURSOR.md`, `CLAUDE.md`), which may name host tools and
+installer mechanics but not restate a working rule. `README.md` owns why
+the standing-policy, on-demand-Skill, and project layers stay separate; it
+points at the policy-owned persistence contract rather than restating the
+closed document-kind set or the path shape.

@@ -9,7 +9,7 @@ updated: <YYYY-MM-DD>
 
 ## Selected direction and acceptance
 
-- Subject identity: <stable identity>
+- Subject identity: <the selected outcome>
 - Authoritative owner: <planning owner>
 - Selected direction: <already-settled direction>
 - Observable acceptance: <the acceptance signal>

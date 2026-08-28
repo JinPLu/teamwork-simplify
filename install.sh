@@ -26,7 +26,16 @@ while [[ $# -gt 0 ]]; do
       ;;
     --project-root)
       [[ $# -ge 2 ]] || { echo "--project-root requires a path." >&2; usage; exit 2; }
-      PROJECT_ROOT="$(cd "$2" && pwd)"
+      if [[ ! -d "$2" ]]; then
+        echo "--project-root must be an existing directory: $2" >&2
+        usage
+        exit 2
+      fi
+      PROJECT_ROOT="$(cd "$2" 2>/dev/null && pwd)" || {
+        echo "--project-root is not an accessible directory: $2" >&2
+        usage
+        exit 2
+      }
       shift 2
       ;;
     --profile)

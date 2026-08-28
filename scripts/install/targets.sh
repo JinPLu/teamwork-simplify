@@ -112,7 +112,25 @@ install_all() {
 }
 
 install_update() {
-  install_codex
+  local pointer root hosts host
+  if ! pointer="$(read_source_pointer)"; then
+    echo "Cannot refresh Teamwork: the recorded source pointer is unusable." >&2
+    return 1
+  fi
+  root="$(printf '%s\n' "$pointer" | sed -n '1p')"
+  hosts="$(printf '%s\n' "$pointer" | sed -n '2p')"
+  if [[ -z "$hosts" ]]; then
+    echo "Teamwork source pointer at $HOME/.teamwork/install.json records no installed host; run ./install.sh <host> from the checkout you want." >&2
+    return 1
+  fi
+
+  echo "Refreshing Teamwork from the recorded checkout: $root"
+  for host in $hosts; do
+    echo "Refreshing recorded host: $host"
+    TEAMWORK_INSTALL_MODE="$INSTALL_MODE" \
+    TEAMWORK_CODEX_PROFILE="$CODEX_PROFILE" \
+      bash "$root/install.sh" "$host"
+  done
 }
 
 init_project() {

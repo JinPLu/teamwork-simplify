@@ -54,11 +54,12 @@ re-asked at a handoff into a separate planning step.
 
 ## Persistence
 
-The project's own `AGENTS.md` Teamwork block owns when a checkpoint fires,
-which of the four kinds it belongs to, how identity is judged, and the path
-it reuses. Follow that block; do not restate or override it here. When a
-checkpoint fires while this Skill is loaded, fill the matching template —
-`references/discussion.md`, `references/plan.md`, `references/record.md`, or
-`references/experiment.md` — and write it in the same response cycle. An
-optional Writer may carry out that write when doing so does not delay it,
-and never decides document identity or what counts as material.
+The global policy's Teamwork bridge owns the persistence contract: when a
+checkpoint fires, which of the four kinds it is, how identity is judged, the
+path it reuses, and the document shape. Follow it; do not restate or override
+it here. `references/discussion.md`, `references/plan.md`,
+`references/record.md`, and `references/experiment.md` are fuller skeletons of
+that same shape — use the matching one when it is at hand, and write the
+document either way. An optional Writer may carry out that write when doing so
+does not delay it, and never decides document identity or what counts as
+material.

@@ -31,16 +31,21 @@ Teamwork 把规则分放进三个物理上不同的层，原因不是风格选�
   Codex / Cursor / Claude Code 三个宿主各自的全局指令文件，每个项目的
   每个线程都会读到它，不管这次对话有没有提到 Teamwork。这份"每线程都要
   付费"的成本决定了它只能装动手前就必须成立的规则；任何项目专属或任务
-  专属的细节放进来，都是让用不到它的线程白白买单。
+  专属的细节放进来，都是让用不到它的线程白白买单。四类文档各自何时
+  落盘、落在哪个 kind、身份怎么判断、路径怎么复用、文档长什么样——这份
+  最小完整的落盘契约整份住在这里，因为它必须在原生交互（不先点名 Skill）
+  里同样成立，只有常驻层能做到这一点。
 - **按需层**（`skills/teamwork-collaborate/SKILL.md`）。Skill 有两部分、
   两种成本：`description` 常驻在上下文里用于路由，宿主靠它判断当前请求
   是否匹配；正文——真正的方法——只在触发匹配、宿主把文件拉进来时才加载。
   这意味着"这类任务具体怎么做"的方法只能放在正文里；把一条通用约束写进
   Skill 正文，等于没写——它在 Skill 没被触发的大多数时间里根本不生效。
+  落盘契约本身不在这里复述：正文只指向常驻层那份契约，`references/*.md`
+  提供该契约要求的文档骨架（frontmatter 字段、顶部综合、追加式历史），
+  在手边时套用对应的一份。
 - **项目层**（项目自己 `AGENTS.md` 的 Teamwork 托管块）。承载项目作用域
-  的规则。从这一轮起，四类文档各自何时落盘、落在哪个 kind、身份怎么判断、
-  路径怎么复用这份落盘契约就住在这里，而不是散落在 Skill 正文或某份说明
-  文档里——所以原生交互里接受一个可复用结论也会落盘，不必先点名 Skill。
+  的补充与覆盖——例如这个项目的 `docs/teamwork/` 落盘根目录在哪。落盘
+  契约本身的唯一所有者是常驻层，这一层只加项目专属细节，不复述契约。
 
 规则放错层的后果是双向的：放进常驻层的任务专用规则，让每一个用不到它的
 线程都要为它付出上下文成本；放进按需层的通用约束，在 Skill 没加载的时候
@@ -68,9 +73,16 @@ cd teamwork-simplify
   设置里的一份文本，不是安装器能直接写的文件——这一步需要手动粘贴到
   Settings -> Rules -> User Rules。
 
-安装会在 `~/.teamwork/install.json` 里记下这次是从哪个 checkout 装的。
-之后 `./install.sh update`、`init-project` 都从这个源指针读取，刷新
-不依赖执行那条命令时你人正待在哪个目录。
+每个安装 target（`codex` / `cursor` / `claude` / `all`，以及 `init-project`）
+都会把这次运行所在的 checkout 写进 `~/.teamwork/install.json`：覆盖
+`root`（当前 checkout 的绝对路径）与 `version`，并把这次装的宿主并入已
+记录的 `hosts` 列表（`init-project` 不带宿主，不会新增或删除任何宿主
+记录，只刷新 `root`/`version`）。只有 `./install.sh update` 会**读**这份
+指针：它按指针记录的 `root` 依次对指针记录的**每一个**宿主重新执行
+`./install.sh <host>`，和你运行 `update` 时人在哪个目录无关；指针缺失、
+不是合法 JSON、记录的 `hosts` 为空、或记录的 checkout 已不可用（缺
+`VERSION`、`skills/`、`install.sh` 三者之一）时，`update` 直接失败退出，
+不会退回当前目录、也不会改写指针。`init-project` 只写指针，不读它。
 
 ## 一个 Skill 能做什么
 
@@ -120,10 +132,11 @@ Root 只在并行调查、独立判断或分工确实有用时才派发；handof
 | 🧪 Experiment | 一次试验的说法、设置、实际运行、结果与结论 |
 
 四类是闭集，不会新造第五类，也不会在 `docs/teamwork/` 根目录直接落盘。
-具体落盘时机、身份判据、路径复用规则由目标项目自己 `AGENTS.md` 里的
-Teamwork 托管块承载——那是这份落盘契约唯一的所有者。文档不依赖 Case、
-schema、JSON 索引或迁移状态；没有可复用的变化时，也不必为了流程去创建
-文档。详见 [`docs/teamwork/README.md`](docs/teamwork/README.md)。
+具体何时落盘、落哪个 kind、身份怎么判断、路径怎么复用、文档长什么样，
+这份最小完整的落盘契约唯一的所有者是常驻层 `policy/teamwork-global.md`；
+目标项目自己 `AGENTS.md` 里的 Teamwork 托管块只加项目专属细节，不复述
+契约。文档不依赖 Case、schema、JSON 索引或迁移状态；没有可复用的变化时，
+也不必为了流程去创建文档。详见 [`docs/teamwork/README.md`](docs/teamwork/README.md)。
 
 ## 项目初始化
 

@@ -9,8 +9,11 @@ Codex is Teamwork's primary runtime. Clone this repository and run:
 This installs the Skill, the three role templates, and the standing policy
 into `~/.codex/AGENTS.md` under the `TEAMWORK_CODEX_GLOBAL_START` /
 `_END` marker. Run `./install.sh update` to refresh a checkout that is
-already installed; `~/.teamwork/install.json` records which checkout
-`update` reads from.
+already installed: it reads `~/.teamwork/install.json`, then replays
+`./install.sh <host>` for every host that pointer records — not only
+Codex — from the recorded checkout root, regardless of the directory you
+run `update` from. A missing, malformed, or no-longer-usable pointer fails
+`update` outright; it never falls back to the current directory.
 
 Challenger, Worker, and Writer install as Codex agent profiles under
 `~/.codex/agents`. Their availability, installed version, and static routing
@@ -24,10 +27,11 @@ Writer is a dispatch role, not a Skill. Explicit Skill invocation remains
 `$teamwork-collaborate`. Native Plan proposals are candidates until the
 user approves them; native questions collect input and do not by
 themselves create a document. After the user accepts a reusable result,
-the project's own `AGENTS.md` Teamwork block — not this file — owns when
-that write fires, which of the four document kinds it belongs to, and the
-path it reuses (see README.md's persistence sections); Root writes it,
-then continues with native execution approval.
+the global policy's Teamwork bridge — not this file — owns when that write
+fires, which of the four document kinds it belongs to, and the path it
+reuses; a project's own `AGENTS.md` Teamwork block only adds
+project-specific detail on top (see README.md). Root writes it, then
+continues with native execution approval.
 
 Codex role models pin by job under the active `--profile`. With
 `performance-first` (the default): Worker uses `gpt-5.6-sol` at medium

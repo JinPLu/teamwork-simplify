@@ -23,8 +23,9 @@ Teamwork does not add a second implementation of any of them:
   persistence. Writing project files during Plan mode is not itself a
   write; the host plan file under `~/.claude/plans/` is a machine-local
   editing surface. When the user approves exiting Plan mode, that approval
-  is acceptance of a reusable plan — write permission returns, so apply the
-  Skill's persistence contract in the same response cycle, then continue.
+  is acceptance of a reusable plan — write permission returns, so persist it
+  as the global policy's Teamwork bridge specifies in the same response
+  cycle, then continue.
 - **Explore** handles live local search directly; do not name a custom
   agent `Explore` — that identifier overrides the built-in.
 - **`code-review`** is the host's own independent-review surface; Teamwork
@@ -33,10 +34,11 @@ Teamwork does not add a second implementation of any of them:
   machine-local and is not Teamwork persistence.
 
 `AskUserQuestion` batches collect input and do not by themselves create a
-document. After the user accepts a reusable result, the project's own
-`AGENTS.md` Teamwork block owns when that write fires, which of the four
-document kinds it belongs to, and the path it reuses (see README.md's
-persistence sections); Root writes it in the same response cycle.
+document. After the user accepts a reusable result, the global policy's
+Teamwork bridge owns when that write fires, which of the four document
+kinds it belongs to, and the path it reuses (see README.md); a project's
+own `AGENTS.md` Teamwork block only adds project-specific detail on top.
+Root writes it in the same response cycle.
 
 ## Roles and models
 

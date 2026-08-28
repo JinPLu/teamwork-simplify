@@ -62,7 +62,9 @@ Targets:
   all            Compatibility/development target: install static surfaces for
                  all hosts, activate observable Codex/Claude policy, and
                  report Cursor policy as partial
-  update         Refresh Teamwork's Codex global surfaces from this checkout
+  update         Refresh Teamwork from the checkout recorded in
+                 ~/.teamwork/install.json, for every host that pointer
+                 records; fails when the pointer is missing or unusable
   init-project   Add or refresh one concise Teamwork block in a project's
                  AGENTS.md, plus the small CLAUDE.md import that lets a host
                  which reads CLAUDE.md load it, without changing global
@@ -237,61 +239,73 @@ teamwork_skill_root_has_markers() {
   [[ -f "$root/.teamwork-version" && -f "$root/.teamwork-profile" ]]
 }
 
+# A symlink is Teamwork-owned evidence only when it points back at a checkout's
+# `skills/<suffix>` path. `suffix` is `<retired>` for a linked Skill directory
+# and `<retired>/SKILL.md` for a linked Skill file.
+teamwork_retired_skill_link_is_owned() {
+  local link="$1"
+  local suffix="$2"
+  local raw_target resolved
+
+  [[ -L "$link" ]] || return 1
+  raw_target="$(readlink "$link" 2>/dev/null || true)"
+  resolved="$(readlink -f "$link" 2>/dev/null || true)"
+  [[ "$raw_target" == */skills/"$suffix" || "$resolved" == */skills/"$suffix" ]]
+}
+
+# Root-level ownership markers say the root was installed into; they say nothing
+# about who owns one entry inside it. Ownership of a retired entry is decided by
+# that entry's own signature: a Teamwork SKILL.md, or a symlink into a checkout.
 teamwork_retired_skill_entry_is_owned() {
   local root="$1"
   local retired="$2"
   local entry="$root/$retired"
   local skill_file="$entry/SKILL.md"
 
-  if [[ "$retired" == "$LEGACY_CODEX_ROUTER_SKILL" ]]; then
-    teamwork_skill_root_has_markers "$root"
+  if [[ -L "$entry" ]]; then
+    teamwork_retired_skill_link_is_owned "$entry" "$retired"
     return
   fi
-  teamwork_skill_root_has_markers "$root" && return 0
+  [[ -d "$entry" ]] || return 1
+  if [[ -L "$skill_file" ]]; then
+    teamwork_retired_skill_link_is_owned "$skill_file" "$retired/SKILL.md"
+    return
+  fi
   [[ -f "$skill_file" ]] || return 1
-  grep -q "^name: $retired$" "$skill_file" && grep -qi "teamwork" "$skill_file"
+  grep -q "^name: $retired$" "$skill_file" || return 1
+  # A retired `teamwork*` name puts the word "teamwork" in its own frontmatter
+  # name line, so that line proves nothing. Ownership needs a Teamwork mention
+  # somewhere else in the file.
+  grep -vi "^name:" "$skill_file" | grep -qi "teamwork" || return 1
+  # `teamwork` is the most generic name of all: require root-level ownership
+  # markers on top of the signature before claiming it.
+  if [[ "$retired" == "$LEGACY_CODEX_ROUTER_SKILL" ]]; then
+    teamwork_skill_root_has_markers "$root" || return 1
+  fi
+  return 0
 }
 
 remove_retired_skill() {
   local dest_root="$1"
   local retired="$2"
   local dest="$dest_root/$retired"
-  local link="$dest/SKILL.md"
-  local raw_target resolved
 
-  if teamwork_skill_root_has_markers "$dest_root"; then
-    rm -rf "$dest"
+  [[ -e "$dest" || -L "$dest" ]] || return 0
+
+  if ! teamwork_retired_skill_entry_is_owned "$dest_root" "$retired"; then
+    echo "Preserved unrecognized retired Skill: $dest" >&2
     return 0
   fi
 
   if [[ -L "$dest" ]]; then
-    raw_target="$(readlink "$dest" 2>/dev/null || true)"
-    resolved="$(readlink -f "$dest" 2>/dev/null || true)"
-    if [[ "$raw_target" == */skills/"$retired" || "$resolved" == */skills/"$retired" ]]; then
-      rm -f "$dest"
-    fi
-    return 0
-  fi
-
-  [[ -e "$link" || -L "$link" ]] || return 0
-
-  if [[ -L "$link" ]]; then
-    raw_target="$(readlink "$link" 2>/dev/null || true)"
-    resolved="$(readlink -f "$link" 2>/dev/null || true)"
-    if [[ "$raw_target" == */skills/"$retired"/SKILL.md || "$resolved" == */skills/"$retired"/SKILL.md ]]; then
-      rm -f "$link"
-      rmdir "$dest" 2>/dev/null || true
-    fi
-    return 0
-  fi
-
-  [[ -f "$link" ]] || return 0
-  grep -q "^name: $retired$" "$link" || return 0
-  if teamwork_retired_skill_entry_is_owned "$dest_root" "$retired"; then
-    rm -rf "$dest"
+    rm -f "$dest"
+  elif [[ -L "$dest/SKILL.md" ]]; then
+    rm -f "$dest/SKILL.md"
+    rmdir "$dest" 2>/dev/null || true
   else
-    echo "Preserved unrecognized retired Skill: $dest" >&2
+    rm -rf "$dest"
   fi
+  echo "Removed retired Teamwork Skill: $dest"
 }
 
 install_skill_dir() {
@@ -411,6 +425,49 @@ remove_legacy_plugin_activation() {
   fi
 }
 
+# Prints the recorded checkout root on line 1 and its recorded hosts,
+# space-separated, on line 2. Fails with a readable message when the pointer is
+# missing, malformed, or records a checkout that is no longer usable. It never
+# falls back to the current checkout and never rewrites the pointer.
+read_source_pointer() {
+  python3 - "$ROOT/scripts/write-source-pointer.py" "$HOME" <<'POINTER'
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+module_path, home = sys.argv[1], sys.argv[2]
+spec = importlib.util.spec_from_file_location("teamwork_source_pointer", module_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+path = module.pointer_path(Path(home))
+if path.is_symlink():
+    sys.exit(f"Teamwork source pointer is a symlink, not a regular file: {path}")
+if not path.exists():
+    sys.exit(
+        f"Teamwork source pointer is missing: {path}. "
+        "Run ./install.sh <host> from the Teamwork checkout you want to install from."
+    )
+try:
+    value = json.loads(path.read_text(encoding="utf-8"))
+except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+    sys.exit(f"Teamwork source pointer is not readable JSON at {path}: {exc}")
+try:
+    module.validate_pointer_object(value)
+except module.PointerError as exc:
+    sys.exit(f"Teamwork source pointer is malformed at {path}: {exc}")
+root = Path(value["root"])
+if not module.checkout_is_valid(root):
+    sys.exit(
+        f"Teamwork source pointer at {path} records {root}, which is not a usable "
+        "Teamwork checkout (VERSION, skills/, and install.sh must all be present)."
+    )
+print(root)
+print(" ".join(value["hosts"]))
+POINTER
+}
+
 write_source_pointer() {
   local path
   path="$(
@@ -504,8 +561,9 @@ legacy_codex_router_copy_is_owned() {
   [[ -e "$entry" || -L "$entry" ]] || return 0
   [[ -d "$entry" && ! -L "$entry" ]] || return 1
   # `teamwork` is a generic name. Never claim it from prose or frontmatter
-  # alone; only root-level Teamwork ownership markers authorize cleanup.
-  teamwork_skill_root_has_markers "$legacy_root"
+  # alone, and never from root-level markers alone: the entry must carry the
+  # Teamwork SKILL.md signature *and* sit under a Teamwork-owned root.
+  teamwork_retired_skill_entry_is_owned "$legacy_root" "$LEGACY_CODEX_ROUTER_SKILL"
 }
 
 preflight_owned_legacy_cleanup() {

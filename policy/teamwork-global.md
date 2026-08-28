@@ -42,11 +42,27 @@
 
 ## Teamwork bridge
 
-- Clear work finishes natively. Name a Skill only when the request matches
-  its description's trigger. Delegation carries five fields:
-  objective, owned scope, settled constraints, available evidence, requested
-  return. A missing optional role does not block native work. After the user
-  accepts a reusable semantic result — a plan, decision, diagnosis,
-  conclusion, or verdict — write it down as the project's own `AGENTS.md`
-  Teamwork block specifies, even without explicit invocation; persistence
-  follows the visible result and does not replace the next real action.
+- Clear work finishes natively; name a Skill only when the request matches its
+  description's trigger. Delegation carries objective, owned scope, settled
+  constraints, available evidence, requested return; a missing optional role does
+  not block native work. A project's `AGENTS.md` Teamwork block adds
+  project-specific detail on top of this contract and does not restate it.
+- Persistence fires when the user accepts a reusable semantic result, Skill named
+  or not, and is written in that same response cycle. An ordinary next action is
+  not a checkpoint; chat, host plans, and todos are not memory.
+- Kind is the first match in this order. `experiments/`: one executed trial with
+  its command or config and observed numbers — identity is the claim under test
+  plus that setup. `plans/`: ordered steps toward a selected outcome, not yet
+  carried out — identity is that outcome. `records/`: an outcome already reached
+  — a result, conclusion, verdict, or blocker — identity is the continuing
+  objective. `discussions/`: an option space, recommendation, or open-question
+  batch still undecided — identity is the final goal plus the subject.
+- Same identity, same path: list `docs/teamwork/<kind>/` and read each file's
+  frontmatter and identity lines. On a match append a dated History entry and
+  refresh the top synthesis and `updated`, following `superseded-by` first when
+  that file is superseded; with no match create `docs/teamwork/<kind>/<slug>.md`,
+  `<slug>` being the identity in lowercase ASCII kebab-case.
+- Shape: frontmatter `status`, `superseded-by`, `created`, `updated`; current
+  synthesis on top; append-only dated History at the bottom, a correction being a
+  new entry and never a rewrite; the user's original wording kept separate from
+  your working understanding.

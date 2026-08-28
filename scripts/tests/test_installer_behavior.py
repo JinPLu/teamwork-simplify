@@ -1,0 +1,299 @@
+"""Installer behavior, observed by running it against a throwaway HOME."""
+
+from __future__ import annotations
+
+import json
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from harness import (  # noqa: E402
+    CLAUDE_POLICY_END,
+    CLAUDE_POLICY_START,
+    CODEX_POLICY_END,
+    CODEX_POLICY_START,
+    POINTER_RELATIVE,
+    TeamworkCase,
+    digest,
+    snapshot,
+    split_managed,
+)
+
+
+# A user's own Skill that happens to carry a name on the retired list. Its body
+# never mentions Teamwork, so no ownership signature can claim it.
+FOREIGN_GRILL = "Ask five hard questions about the change under review."
+# `teamwork` is the most generic retired name of all; a squad-ritual Skill of
+# that name is exactly the case a marker-only ownership check destroys.
+FOREIGN_ROUTER = "Facilitate a standup: blockers, progress, next step."
+# A retired Skill as a previous Teamwork release actually installed it.
+OWNED_RETIRED_SKILL = "The Teamwork planning Skill, retired in a later release."
+
+
+class RetiredCleanupTests(TeamworkCase):
+    def test_retired_cleanup_preserves_entries_this_checkout_never_installed(self) -> None:
+        """The 1.0.0 blocker: a user's own Skill was deleted by name alone."""
+        self.install_ok("claude")
+        skills = self.home / ".claude" / "skills"
+        agents = self.home / ".claude" / "agents"
+
+        self.write_skill(skills, "grill-me", "grill-me", FOREIGN_GRILL)
+        notes = self.write(skills / "grill-me" / "notes.md", "My own notes.\n")
+        self.write_skill(skills, "teamwork", "teamwork", FOREIGN_ROUTER)
+        # A retired *name* whose directory holds only the user's own files.
+        checklist = self.write(skills / "teamwork-review" / "CHECKLIST.md", "My checklist.\n")
+        # A retired agent name that is not a Teamwork role profile.
+        reviewer = self.write_agent(agents, "reviewer", "You review pull requests for my team.")
+
+        before = {
+            "grill-me": digest(skills / "grill-me" / "SKILL.md"),
+            "notes": digest(notes),
+            "teamwork": digest(skills / "teamwork" / "SKILL.md"),
+            "checklist": digest(checklist),
+            "reviewer": digest(reviewer),
+        }
+
+        self.install_ok("claude")
+        self.install_ok("claude")
+
+        self.assertTrue((skills / "grill-me" / "SKILL.md").is_file())
+        self.assertTrue((skills / "teamwork" / "SKILL.md").is_file())
+        self.assertEqual(
+            before,
+            {
+                "grill-me": digest(skills / "grill-me" / "SKILL.md"),
+                "notes": digest(notes),
+                "teamwork": digest(skills / "teamwork" / "SKILL.md"),
+                "checklist": digest(checklist),
+                "reviewer": digest(reviewer),
+            },
+        )
+
+    def test_retired_cleanup_removes_copies_a_previous_release_installed(self) -> None:
+        self.install_ok("claude")
+        skills = self.home / ".claude" / "skills"
+        agents = self.home / ".claude" / "agents"
+
+        retired_skill = self.write_skill(
+            skills, "teamwork-plan", "teamwork-plan", OWNED_RETIRED_SKILL
+        )
+        retired_agent = self.write_agent(
+            agents, "researcher", "You are the Teamwork Researcher."
+        )
+        self.assertTrue(retired_skill.is_dir())
+        self.assertTrue(retired_agent.is_file())
+
+        self.install_ok("claude")
+
+        self.assertFalse(retired_skill.exists())
+        self.assertFalse(retired_agent.exists())
+
+    def test_retired_cleanup_removes_a_symlinked_copy_but_not_a_foreign_link(self) -> None:
+        """--link installs leave symlinks; ownership follows the link target."""
+        self.install_ok("--link", "claude")
+        skills = self.home / ".claude" / "skills"
+
+        owned = skills / "teamwork-goal"
+        owned.symlink_to(self.workdir / "some-checkout" / "skills" / "teamwork-goal")
+        foreign = skills / "teamwork-init"
+        foreign.symlink_to(self.workdir)
+
+        self.install_ok("--link", "claude")
+
+        self.assertFalse(owned.is_symlink())
+        self.assertTrue(foreign.is_symlink())
+        self.assertTrue(self.workdir.is_dir())
+
+    def test_install_refuses_to_replace_an_unowned_current_skill(self) -> None:
+        """A same-named Skill without Teamwork ownership markers is not ours."""
+        skills = self.home / ".claude" / "skills"
+        self.write_skill(skills, "teamwork-collaborate", "teamwork-collaborate", "My own fork.")
+        mine = self.write(skills / "teamwork-collaborate" / "mine.md", "My own notes.\n")
+        before = snapshot(skills)
+
+        done = self.install("claude")
+
+        self.assertNotEqual(done.returncode, 0, done.stdout)
+        self.assertEqual(before, snapshot(skills))
+        self.assertTrue(mine.is_file())
+
+
+class IdempotenceTests(TeamworkCase):
+    def test_repeated_installs_are_byte_identical_from_the_second_run(self) -> None:
+        self.install_ok("all")
+        self.install_ok("all")
+        second = snapshot(self.home, skip=(POINTER_RELATIVE,))
+        self.install_ok("all")
+        third = snapshot(self.home, skip=(POINTER_RELATIVE,))
+        self.install_ok("all")
+        fourth = snapshot(self.home, skip=(POINTER_RELATIVE,))
+
+        self.assertEqual(second, third)
+        self.assertEqual(third, fourth)
+        self.assertTrue((self.home / POINTER_RELATIVE).is_file())
+
+
+class ManagedBlockIsolationTests(TeamworkCase):
+    #  Two sentences a 1.0.0 migration hack deleted by literal match, from
+    #  *outside* the managed block. Here they are the user's own text.
+    USER_FILE = (
+        "# My own global rules\n"
+        "\n"
+        "Always greet the cat.\n"
+        "\n"
+        "No user needs to specify sub-agents for distribution; default assignment is used.\n"
+        "All code runs on a remote server; the local environment only supports basic"
+        " testing and syntax checking.\n"
+        "\n"
+        "<!-- MY_OWN_BLOCK_START -->\n"
+        "Never touch anything between my own markers.\n"
+        "<!-- MY_OWN_BLOCK_END -->\n"
+        "\n"
+        "A closing note of mine.\n"
+    )
+
+    def test_install_rewrites_only_between_its_own_markers(self) -> None:
+        claude = self.write(self.home / ".claude" / "CLAUDE.md", self.USER_FILE)
+        codex = self.write(self.home / ".codex" / "AGENTS.md", self.USER_FILE)
+
+        self.install_ok("all")
+
+        for path, start, end in (
+            (claude, CLAUDE_POLICY_START, CLAUDE_POLICY_END),
+            (codex, CODEX_POLICY_START, CODEX_POLICY_END),
+        ):
+            text = path.read_text(encoding="utf-8")
+            before, _inside, after = split_managed(text, start, end)
+            self.assertEqual(
+                before.rstrip("\n"),
+                self.USER_FILE.rstrip("\n"),
+                f"{path} lost or altered content outside the managed block",
+            )
+            self.assertEqual(after.strip(), "")
+
+    def test_repeated_installs_do_not_grow_a_file_that_already_had_user_text(self) -> None:
+        claude = self.write(self.home / ".claude" / "CLAUDE.md", self.USER_FILE)
+        codex = self.write(self.home / ".codex" / "AGENTS.md", self.USER_FILE)
+
+        self.install_ok("all")
+        sizes = (claude.stat().st_size, codex.stat().st_size)
+        first = (claude.read_bytes(), codex.read_bytes())
+        for _ in range(3):
+            self.install_ok("all")
+        self.assertEqual(sizes, (claude.stat().st_size, codex.stat().st_size))
+        self.assertEqual(first, (claude.read_bytes(), codex.read_bytes()))
+
+
+class UpdateTests(TeamworkCase):
+    def stamp(self, host_root: str) -> str:
+        return (self.home / host_root / ".teamwork-version").read_text(encoding="utf-8").strip()
+
+    def test_update_refreshes_every_recorded_host_from_the_recorded_checkout(self) -> None:
+        recorded = self.checkout_copy("recorded", "9.9.9-recorded")
+        other = self.checkout_copy("other", "0.0.1-other")
+
+        self.install_ok("claude", checkout=recorded)
+        self.install_ok("codex", checkout=recorded)
+
+        pointer = self.home / POINTER_RELATIVE
+        self.assertEqual(
+            sorted(json.loads(pointer.read_text(encoding="utf-8"))["hosts"]),
+            ["claude", "codex"],
+        )
+
+        # Overwrite both installed roots so a no-op update cannot pass.
+        for root in (".claude/skills", ".agents/skills"):
+            (self.home / root / ".teamwork-version").write_text("stale\n", encoding="utf-8")
+
+        done = self.install_ok("update", checkout=other)
+
+        self.assertEqual(self.stamp(".claude/skills"), "9.9.9-recorded", done.stdout)
+        self.assertEqual(self.stamp(".agents/skills"), "9.9.9-recorded", done.stdout)
+        self.assertEqual(
+            json.loads(pointer.read_text(encoding="utf-8"))["root"], str(recorded)
+        )
+
+    def test_update_fails_without_touching_anything_when_the_pointer_is_unusable(self) -> None:
+        recorded = self.checkout_copy("recorded", "9.9.9-recorded")
+        other = self.checkout_copy("other", "0.0.1-other")
+        self.install_ok("claude", checkout=recorded)
+        pointer = self.home / POINTER_RELATIVE
+        healthy = pointer.read_text(encoding="utf-8")
+
+        broken = {
+            "not-json": "{ this is not json",
+            "missing-root": json.dumps(
+                {
+                    "root": str(self.workdir / "gone"),
+                    "version": "1.0.0",
+                    "hosts": ["claude"],
+                    "installed_at": "2026-08-29T00:00:00Z",
+                }
+            ),
+            "not-a-checkout": json.dumps(
+                {
+                    "root": str(self.workdir),
+                    "version": "1.0.0",
+                    "hosts": ["claude"],
+                    "installed_at": "2026-08-29T00:00:00Z",
+                }
+            ),
+            "no-hosts": json.dumps(
+                {
+                    "root": str(recorded),
+                    "version": "1.0.0",
+                    "hosts": [],
+                    "installed_at": "2026-08-29T00:00:00Z",
+                }
+            ),
+        }
+
+        for label, content in broken.items():
+            with self.subTest(pointer=label):
+                pointer.write_text(content, encoding="utf-8")
+                before = snapshot(self.home)
+                done = self.install("update", checkout=other)
+                self.assertNotEqual(done.returncode, 0, done.stdout)
+                self.assertEqual(before, snapshot(self.home))
+
+        pointer.write_text(healthy, encoding="utf-8")
+        self.install_ok("update", checkout=other)
+
+    def test_update_fails_when_no_pointer_was_ever_written(self) -> None:
+        done = self.install("update")
+        self.assertNotEqual(done.returncode, 0, done.stdout)
+        self.assertEqual(snapshot(self.home), {})
+
+
+class CommandLineTests(TeamworkCase):
+    def rejected(self, *args: str) -> None:
+        done = self.install(*args)
+        self.assertEqual(
+            done.returncode,
+            2,
+            f"install.sh {' '.join(args)}\nstdout:\n{done.stdout}\nstderr:\n{done.stderr}",
+        )
+        self.assertEqual(
+            snapshot(self.home), {}, f"install.sh {' '.join(args)} wrote to HOME anyway"
+        )
+
+    def test_invalid_invocations_exit_two_and_write_nothing(self) -> None:
+        missing = self.workdir / "no-such-directory"
+        a_file = self.workdir / "a-file"
+        a_file.write_text("x\n", encoding="utf-8")
+
+        self.rejected("bogus-target")
+        self.rejected("codex", "claude")
+        self.rejected("--profile", "bogus", "codex")
+        self.rejected("--profile")
+        self.rejected("--profile", "cost-first", "claude")
+        self.rejected("--project-root", str(missing), "init-project")
+        self.rejected("--project-root", str(a_file), "init-project")
+        self.rejected("--project-root")
+        self.rejected("--project-root", str(self.workdir), "codex")
+
+
+if __name__ == "__main__":
+    unittest.main()

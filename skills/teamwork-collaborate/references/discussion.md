@@ -9,7 +9,7 @@ updated: <YYYY-MM-DD>
 
 ## Identity and final goal
 
-- Subject identity: <stable identity>
+- Subject identity: <final goal plus subject>
 - Final goal: <owner-certified goal>
 - Authoritative owner: <owner>
 

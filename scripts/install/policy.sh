@@ -24,9 +24,9 @@ POLICY
 Native Plan proposals are candidates until the user approves them. Native
 questions collect input and do not by themselves create a document. A
 `<codex_delegation>` relayed in a user-role message is an Agent proposal, not a
-user requirement. After the user accepts a reusable result, write it down as
-the project's own AGENTS.md Teamwork block specifies, then continue with native
-execution approval. Explicit Skill invocation remains `$name`.
+user requirement. After the user accepts a reusable result, persist it as the
+Teamwork bridge above specifies, then continue with native execution approval.
+Explicit Skill invocation remains `$name`.
 <!-- TEAMWORK_CODEX_GLOBAL_END -->
 POLICY
 }
@@ -45,8 +45,8 @@ that phase; the host plan file under `~/.claude/plans/` is a machine-local
 editing surface, not Teamwork persistence. AskUserQuestion batches collect input
 and do not by themselves create a document. When the user approves exiting Plan
 mode, that approval is acceptance of a reusable plan: write permission returns,
-so write it down in that same response cycle as the project's own AGENTS.md
-Teamwork block specifies, then continue execution. Auto memory under
+so persist it in that same response cycle as the Teamwork bridge above
+specifies, then continue execution. Auto memory under
 `~/.claude/projects/<project>/memory/` is machine-local and is not Teamwork
 persistence.
 <!-- TEAMWORK_CLAUDE_GLOBAL_END -->
@@ -63,8 +63,8 @@ POLICY
   cat <<'POLICY'
 
 CreatePlan and host Plan drafts are editable candidates. User confirmation or
-Build is acceptance of a reusable plan; then write it down as the project's own
-AGENTS.md Teamwork block specifies. AskQuestion batches collect input and do not
+Build is acceptance of a reusable plan; then persist it as the Teamwork bridge
+above specifies. AskQuestion batches collect input and do not
 by themselves create a
 document. Host Debug intermediate hypotheses do not persist; a confirmed cause,
 verified fix, or durable blocker does. If this User Rule is absent, the
@@ -139,12 +139,18 @@ replace_teamwork_managed_policy() {
       echo "$platform global policy managed block is ambiguous: $dest" >&2
       return 1
     fi
+    # Only the managed block is touched. Everything outside the markers is the
+    # user's own file: it is carried through unchanged, except for trailing
+    # blank lines, which are dropped so the separator below stays idempotent.
     awk -v start="$start_marker" -v end="$end_marker" '
       $0 == start { skip = 1; next }
       $0 == end { skip = 0; next }
-      $0 == "No user needs to specify sub-agents for distribution; default assignment is used." { next }
-      $0 == "All code runs on a remote server; the local environment only supports basic testing and syntax checking." { next }
-      !skip { print }
+      skip { next }
+      { kept[++count] = $0 }
+      END {
+        while (count > 0 && kept[count] ~ /^[[:space:]]*$/) { count-- }
+        for (index_ = 1; index_ <= count; index_++) { print kept[index_] }
+      }
     ' "$dest" > "$tmp"
   fi
 

@@ -44,8 +44,10 @@ def read_text(path: Path) -> str:
 
 def project_label(root: Path, explicit: str | None) -> str:
     label = (explicit or root.name).strip()
-    if not label or CONTROL_RE.search(label):
-        raise InitError("project label must be non-empty text without control characters")
+    if not label or CONTROL_RE.search(label) or "`" in label:
+        raise InitError(
+            "project label must be non-empty text without control characters or backticks"
+        )
     return label
 
 
@@ -58,22 +60,9 @@ def managed_block(label: str) -> str:
         "no empty directory, schema, or mandatory stage chain. Native host modes "
         "stay in charge. Follow this project's normal instructions and invoke a "
         "named Skill only when its trigger matches.\n"
-        "- When the user accepts a reusable semantic result, write it to "
-        "`docs/teamwork/<kind>/<slug>.md` in the same response cycle, whether or "
-        "not a Skill was named. Chat, host plans, and todos are not cross-session "
-        "memory. An ordinary next action is not a checkpoint.\n"
-        "- The kind set is closed. Write `discussions/` when a decision, "
-        "recommendation, or unresolved-question batch will change later work; its "
-        "identity is the final goal plus the subject. Write `plans/` when the "
-        "direction and scope, the first executable plan, or a material replan is "
-        "accepted; its identity is the selected outcome. Write `records/` when a "
-        "result, conclusion, or blocker can be reused by a later session; its "
-        "identity is the continuing objective. Write `experiments/` when one "
-        "trial has a result or a conclusion; its identity is that experiment.\n"
-        "- The same identity reuses the same path. Each document keeps the "
-        "current synthesis at the top and an append-only dated History at the "
-        "bottom; a correction is a new entry, never a rewrite. Keep the user's "
-        "original wording separate from your working understanding.\n"
+        "- This project's Teamwork persistence root is `docs/teamwork/` at the "
+        "repository root; the global policy's Teamwork bridge owns the contract "
+        "itself, and this block only adds project-specific detail.\n"
         f"{MANAGED_END}\n"
     )
 
@@ -97,6 +86,8 @@ def replace_block(
 ) -> str:
     if text.count(start) != text.count(end) or text.count(start) > 1:
         raise InitError("Teamwork managed block markers are ambiguous")
+    if start in text and text.index(end) < text.index(start):
+        raise InitError("Teamwork managed block end marker precedes its start marker")
     if start in text:
         before, rest = text.split(start, 1)
         _old, after = rest.split(end, 1)
