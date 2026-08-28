@@ -1,0 +1,31 @@
+.DS_Store
+.run-analyze-optimize/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.log
+tmp/
+# Root tempfile dirs (tmp0abc...), not the existing tmp/ directory.
+/tmp?*
+dist/
+.codegraph/
+plugins/.teamwork-skill.build-*
+
+# Local workflow artifacts. Keep them in the working tree, but do not publish
+# them to GitHub unless a specific artifact is intentionally force-added.
+docs/teamwork/**
+.teamwork/runtime/**
+docs/superpowers/
+
+# Local Teamwork install profile
+.teamwork-profile
+
+# Host-local settings, disposable agent worktrees, and an accidental duplicate
+# of local Teamwork memory. These are not release inputs.
+.claude/settings.*.json
+.claude/worktrees/
+docs/teamwork 2/
+
+# TEAMWORK_LOCAL_START
+# Teamwork creates no project-local runtime state.
+# TEAMWORK_LOCAL_END

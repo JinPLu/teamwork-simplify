@@ -1,0 +1,24 @@
+{
+  "globs": [
+    "*.md",
+    "docs/*.md",
+    "policy/*.md",
+    "CONTRIBUTING.md"
+  ],
+  "ignores": [
+    "plugins/**",
+    "docs/teamwork/**",
+    "CHANGELOG.md",
+    "CHANGELOG.en.md",
+    "skills/**"
+  ],
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD033": false,
+    "MD041": false,
+    "MD024": false,
+    "MD040": false,
+    "MD012": false
+  }
+}
