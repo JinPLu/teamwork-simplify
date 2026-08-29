@@ -23,8 +23,8 @@
   pass-through parameter to spare a caller. One switch must not carry two
   semantics. Return early on errors and boundaries, not nested; collect
   same-kind criteria into one table, not scattered hand-tuned constants.
-- Do not add what was not asked for: no hash, SHA-256, or checksum; no preemptive
-  or defensive layer for a nonexistent caller; no audit receipt,
+- Do not add what was not asked for: no SHA-256 or other integrity hash; no
+  preemptive or defensive layer for a nonexistent caller; no audit receipt,
   self-verification scaffolding, or retry wrapper. An agent's own judgment
   that a mechanism is "necessary" is not a reason to add or keep it — only a
   user-named requirement, a current real consumer, or an observed failure is.
@@ -93,10 +93,18 @@ refresh the top synthesis and `updated` — following `superseded-by` first when
 that file is superseded. With no match, create `docs/teamwork/<kind>/<name>.md`
 with a lowercase ASCII kebab-case name for that subject.
 
+**Index the active ones.** The README index lists the documents whose `status`
+is `active` — a document is active while a later session still needs to arrive
+at what it holds, which a finished result satisfies as much as open work does.
+When a successor takes over a subject, the old file becomes `status: superseded`
+with `superseded-by` naming it, and its index line goes away; the file stays on
+disk and `ls docs/teamwork/<kind>/` still finds it. The index rides in every
+session's context, so its length is a standing cost, not a per-read one.
+
 Every document has this shape:
 
     ---
-    status: active
+    status: active | superseded
     superseded-by:
     created: <YYYY-MM-DD>
     updated: <YYYY-MM-DD>

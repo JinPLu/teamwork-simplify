@@ -23,6 +23,11 @@ surfaces and never block Codex work.
   project-context contract rather than restating the closed document-kind
   set or the path shape. Commit a change to that file separately from a
   release commit, carrying only the edits needed to keep the tree green.
+- The Code section's prohibition list in `policy/teamwork-global.md` is a
+  frequency-ordered cache of observed agent failures, not a taxonomy. A new
+  item enters only from a failure actually observed in this or another
+  project; an item that stops recurring comes out. Keep it short enough that
+  every entry still competes for attention.
 - Shell scripts use Bash with `set -euo pipefail`, quoted variables, and
   arrays. `skills/teamwork-collaborate/SKILL.md` frontmatter has only `name`
   and `description`, and `description` starts with `Use when`.
