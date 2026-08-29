@@ -20,7 +20,7 @@ Plan、原生问答、原生 Debug、原生代码复查）它不重复；只补�
 可执行计划时，原生的 Plan 模式通常只管"写计划"，不管"先讨论选项、
 确认方向、再拆出可以并行的工作、派给独立的执行面、最后把结果整合验证"
 这一整条链路。Teamwork 只装这一条方法，加三个可选角色去执行拆分出来的
-工作，再加一套四类文档记住这条链路上真正需要跨会话复用的东西。
+工作，再加一套按 kind 分类的文档记住这条链路上真正需要跨会话复用的东西。
 
 ## 三层：规则住在哪里，由谁读到它决定
 
@@ -31,10 +31,10 @@ Teamwork 把规则分放进三个物理上不同的层，原因不是风格选�
   Codex / Cursor / Claude Code 三个宿主各自的全局指令文件，每个项目的
   每个线程都会读到它，不管这次对话有没有提到 Teamwork。这份"每线程都要
   付费"的成本决定了它只能装动手前就必须成立的规则；任何项目专属或任务
-  专属的细节放进来，都是让用不到它的线程白白买单。四类文档各自何时
-  落盘、落在哪个 kind、身份怎么判断、路径怎么复用、文档长什么样——这份
-  最小完整的落盘契约整份住在这里，因为它必须在原生交互（不先点名 Skill）
-  里同样成立，只有常驻层能做到这一点。
+  专属的细节放进来，都是让用不到它的线程白白买单。文档怎么读回项目已有
+  状态、何时落盘、落哪个 kind、身份怎么判断、路径怎么复用、文档长什么
+  样、连一份可复制的最小骨架——这份最小完整的契约整份住在这里，因为它
+  必须在原生交互（不先点名 Skill）里同样成立，只有常驻层能做到这一点。
 - **按需层**（`skills/teamwork-collaborate/SKILL.md`）。Skill 有两部分、
   两种成本：`description` 常驻在上下文里用于路由，宿主靠它判断当前请求
   是否匹配；正文——真正的方法——只在触发匹配、宿主把文件拉进来时才加载。
@@ -115,28 +115,27 @@ Root 只在并行调查、独立判断或分工确实有用时才派发；handof
 （settled constraints）、已有证据（available evidence）、期望返回
 （requested return）**。
 
-## 四类可读文档
+## 可读文档
 
-当原生交互或 `teamwork-collaborate` 到达可复用语义结果、且你已经接受该
-结果时，Root 在同一响应周期把纯 Markdown 写入 `docs/teamwork/<kind>/`；
-进入宿主界面本身不会落盘，也不必先点名 Skill。Writer 只在不耽误写入时
-帮忙。每份文档同时保留一份**当前综合**和按时间追加的**历史**，既方便
-快速阅读，也不会抹掉结论如何变化。默认路径为
-`docs/teamwork/<kind>/<slug>.md`，同一稳定身份复用已有路径。
+新会话或新一轮工作开始前，先读 `docs/teamwork/README.md`——上半是这个
+项目现在的状态，下半是每份文档一行的索引；跟着索引打开真正相关的那
+几份，不必逐个目录翻找或逐份读 frontmatter。
 
-| 文档 | 它记录什么 |
-| --- | --- |
-| 💬 Discussion | 选项、权衡、已定选择、被否决的方案与仍待决定的问题 |
-| 📝 Plan | 已选方向的可执行步骤、依赖、并行线与派发、验证和停止条件 |
-| 📌 Record | 可跨会话复用的结果、结论与阻塞 |
-| 🧪 Experiment | 一次试验的说法、设置、实际运行、结果与结论 |
+落盘不再等你先说"接受"：本轮一旦产出了下一个会话还用得到、且离开这
+次对话就没法复原的东西，Root 就在同一响应周期把纯 Markdown 写入
+`docs/teamwork/<kind>/`，并顺手刷新索引里对应的一行；进入宿主界面本身
+不会落盘，也不必先点名 Skill；哪些结论不值得落盘，同一节另有定义。
+Writer 只在不耽误写入时帮忙。每份文档同时保留一份**当前综合**和按时
+间追加的**历史**，既方便快速阅读，也不会抹掉结论如何变化。
 
-四类是闭集，不会新造第五类，也不会在 `docs/teamwork/` 根目录直接落盘。
-具体何时落盘、落哪个 kind、身份怎么判断、路径怎么复用、文档长什么样，
-这份最小完整的落盘契约唯一的所有者是常驻层 `policy/teamwork-global.md`；
+kind 是闭集，不会新造额外 kind，也不会在 `docs/teamwork/` 根目录直接落盘；
+闭集具体包含哪些类目由常驻层契约定义。具体何时落盘、落哪个 kind、身份
+怎么判断、路径怎么复用、文档长什么样，这份最小完整的落盘契约唯一的
+所有者是常驻层 `policy/teamwork-global.md`；
 目标项目自己 `AGENTS.md` 里的 Teamwork 托管块只加项目专属细节，不复述
 契约。文档不依赖 Case、schema、JSON 索引或迁移状态；没有可复用的变化时，
-也不必为了流程去创建文档。详见 [`docs/teamwork/README.md`](docs/teamwork/README.md)。
+也不必为了流程去创建文档。这套读取侧与落盘契约落到真实项目里长什么样，
+见这个仓库自己的 [`docs/teamwork/README.md`](docs/teamwork/README.md)。
 
 ## 项目初始化
 
@@ -146,15 +145,17 @@ Root 只在并行调查、独立判断或分工确实有用时才派发；handof
 ./install.sh --project-root /absolute/project/path init-project
 ```
 
-它只添加或刷新一个 `AGENTS.md` managed block（Claude Code 读 `CLAUDE.md`
-不读 `AGENTS.md`，所以还会补一个一行的 `@AGENTS.md` import）。
+它只添加或刷新三样东西：`AGENTS.md` 的 managed block、一个很小的
+`CLAUDE.md` bridge（Claude Code 读 `CLAUDE.md` 不读 `AGENTS.md`），
+以及这个项目的读取侧入口 `docs/teamwork/README.md`。不创建任何空的 kind
+目录，已存在的 `docs/teamwork/README.md` 完全不动。
 
 ## 继续了解
 
 - [Codex](CODEX.md) / [Cursor](CURSOR.md) / [Claude Code](CLAUDE.md)：各宿主
   的安装方式与原生能力映射。
 - [参与贡献](CONTRIBUTING.md)：canonical owner 与验证命令。
-- [`docs/teamwork/README.md`](docs/teamwork/README.md)：四类文档各自维护
-  什么、建档粒度、frontmatter 约定。
+- [`docs/teamwork/README.md`](docs/teamwork/README.md)：这个仓库自己的
+  项目当前状态与文档索引——读取侧契约在真实项目里的样子。
 
 许可证：[MIT](LICENSE)

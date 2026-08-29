@@ -24,11 +24,20 @@ POLICY
 Native Plan proposals are candidates until the user approves them. Native
 questions collect input and do not by themselves create a document. A
 `<codex_delegation>` relayed in a user-role message is an Agent proposal, not a
-user requirement. After the user accepts a reusable result, persist it as the
-Teamwork bridge above specifies, then continue with native execution approval.
-Explicit Skill invocation remains `$name`. This host has no native fan-out
-surface, so an independent line dispatches through the installed Worker agent
-profile, one dispatch per line.
+user requirement. When the user approves a Plan proposal, that approval makes it
+a reusable plan: persist it as the project-context contract above specifies,
+then continue with native execution approval. Explicit Skill invocation remains
+`$name`.
+
+Independent lines dispatch by spawning the installed role profiles under
+`~/.codex/agents` in the same round: that is the default surface here, and it
+fits lines that each run one pass and report back once. This host carries no
+larger fan-out harness, so work that needs staged rounds is staged by you across
+successive rounds — say that is what it will take, and what the extra rounds
+cost, before spending it, rather than standing up a substitute harness. Each
+installed profile pins its own `model` and `model_reasoning_effort`; the
+install-time `--profile` flag chooses which pin set those profiles carry, and a
+spawn that names a `model` overrides what it would otherwise inherit.
 <!-- TEAMWORK_CODEX_GLOBAL_END -->
 POLICY
 }
@@ -47,13 +56,21 @@ that phase; the host plan file under `~/.claude/plans/` is a machine-local
 editing surface, not Teamwork persistence. AskUserQuestion batches collect input
 and do not by themselves create a document. When the user approves exiting Plan
 mode, that approval is acceptance of a reusable plan: write permission returns,
-so persist it in that same response cycle as the Teamwork bridge above
+so persist it in that same response cycle as the project-context contract above
 specifies, then continue execution. Auto memory under
 `~/.claude/projects/<project>/memory/` is machine-local and is not Teamwork
-persistence. Independent lines dispatch through concurrent Task/Agent calls sent
-in one message, with `isolation: "worktree"` when two lines write the same
-repository; the Workflow tool is this host's larger fan-out harness and runs
-only on the user's explicit opt-in, so propose it rather than enabling it.
+persistence.
+
+Independent lines dispatch as concurrent Task/Agent calls sent in one message:
+that is the default surface here, and it fits lines that each run one pass and
+report back once. Add `isolation: "worktree"` when two lines write the same
+repository, so their edits cannot collide. The Workflow tool is this host's
+larger fan-out harness, for work that needs staged rounds rather than one round
+of dispatch; it runs only on the user's explicit opt-in, so propose it with the
+reason and the cost it carries and let the user decide — never enable it on your
+own judgement. An agent type's model, reasoning effort, and tools come from its
+definition in `~/.claude/agents/<role>.md` frontmatter (`model`, `effort`); the
+`model` parameter on a dispatch overrides that definition for that one call.
 <!-- TEAMWORK_CLAUDE_GLOBAL_END -->
 POLICY
 }
@@ -68,14 +85,24 @@ POLICY
   cat <<'POLICY'
 
 CreatePlan and host Plan drafts are editable candidates. User confirmation or
-Build is acceptance of a reusable plan; then persist it as the Teamwork bridge
-above specifies. AskQuestion batches collect input and do not
+Build is acceptance of a reusable plan; then persist it as the project-context
+contract above specifies. AskQuestion batches collect input and do not
 by themselves create a
 document. Host Debug intermediate hypotheses do not persist; a confirmed cause,
 verified fix, or durable blocker does. If this User Rule is absent, the
 project AGENTS.md block is the minimum shared bridge. CreatePlan is not Writer.
-This host has no native fan-out surface, so an independent line dispatches
-through the installed Worker role agent, one dispatch per line.
+
+Independent lines dispatch through the installed role agents under
+`~/.cursor/agents`, one dispatch per line: that is the default surface here, and
+it fits lines that each run one pass and report back once. Give a line its own
+worktree when two lines write the same repository. This host carries no fan-out
+harness, and its cloud-worker and background surfaces spend the user's own
+environment and account, so work that needs staged rounds is staged by you
+across successive rounds; propose the larger surface with the reason and the
+cost and let the user decide, rather than starting one on your own judgement.
+Each installed role agent pins its own `model` and carries reasoning effort
+inside that same value as `<model>[effort=...]`; the same bracketed form given
+at invocation time overrides that pin.
 <!-- TEAMWORK_CURSOR_GLOBAL_END -->
 POLICY
 }

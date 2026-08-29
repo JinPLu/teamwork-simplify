@@ -16,6 +16,8 @@ MANAGED_END = "<!-- TEAMWORK_PROJECT_END -->"
 BRIDGE_START = "<!-- TEAMWORK_CLAUDE_BRIDGE_START -->"
 BRIDGE_END = "<!-- TEAMWORK_CLAUDE_BRIDGE_END -->"
 AGENTS_IMPORT = "@AGENTS.md"
+README_IMPORT = "@docs/teamwork/README.md"
+DOCS_README_RELATIVE = ("docs", "teamwork", "README.md")
 CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 CODE_SPAN_RE = re.compile(r"`[^`]*`")
 
@@ -60,21 +62,86 @@ def managed_block(label: str) -> str:
         "no empty directory, schema, or mandatory stage chain. Native host modes "
         "stay in charge. Follow this project's normal instructions and invoke a "
         "named Skill only when its trigger matches.\n"
-        "- This project's Teamwork persistence root is `docs/teamwork/` at the "
-        "repository root; the global policy's Teamwork bridge owns the contract "
-        "itself, and this block only adds project-specific detail.\n"
+        "- This project's Teamwork context lives under `docs/teamwork/` at the "
+        "repository root, with `docs/teamwork/README.md` as the reading-side "
+        "entry point; the global policy's project-context contract owns it, and "
+        "this block only adds project-specific detail.\n"
         f"{MANAGED_END}\n"
     )
 
 
-def bridge_block() -> str:
+def project_constraints_seed() -> str:
     return (
-        f"{BRIDGE_START}\n"
+        "## Project-specific constraints\n\n"
+        "Fill this in with what only this project knows — its code style "
+        "boundaries, directory tidiness expectations, and mechanisms it allows "
+        "or forbids. Teamwork does not decide this content.\n\n"
+        "- <add a project-specific constraint here>\n"
+        "- <add another one here>\n"
+    )
+
+
+def seed_project_constraints(text: str) -> str:
+    # `replace_block` strips every leading newline from whatever trails the
+    # managed block on a later run (see its `after.lstrip("\n")`), so the
+    # seed must sit immediately after the block's own trailing newline with
+    # no blank-line separator — anything else would not be a fixed point and
+    # would get squeezed away the next time `initialize` regenerates the
+    # block, breaking idempotency.
+    return text + project_constraints_seed()
+
+
+def bridge_block(include_agents_import: bool) -> str:
+    agents_part = (
         "<!-- A host that reads CLAUDE.md instead of AGENTS.md gets the project "
         "block through this import. -->\n"
         f"{AGENTS_IMPORT}\n"
+    ) if include_agents_import else ""
+    return (
+        f"{BRIDGE_START}\n"
+        f"{agents_part}"
+        "<!-- The project's Teamwork reading-side entry point, loaded into every "
+        "session's context. -->\n"
+        f"{README_IMPORT}\n"
         f"{BRIDGE_END}\n"
     )
+
+
+def text_outside_bridge_block(text: str) -> str:
+    """The bridge block's own generated import line is never the user's own
+    copy; only content the user actually authored, outside the block, counts
+    toward an already-active `@AGENTS.md` import."""
+    if text.count(BRIDGE_START) != 1 or text.count(BRIDGE_END) != 1:
+        return text
+    before, rest = text.split(BRIDGE_START, 1)
+    if BRIDGE_END not in rest:
+        return text
+    _inside, after = rest.split(BRIDGE_END, 1)
+    return before + after
+
+
+def project_docs_readme() -> str:
+    return (
+        "# Project Teamwork Documents\n\n"
+        "This is the project's Teamwork reading side: read it before work that "
+        "depends on what this project already decided, concluded, or tried.\n\n"
+        "## Project current state\n\n"
+        "<!-- What is being worked on now, what has already been settled, and "
+        "where it is currently blocked. Keep this current here instead of "
+        "narrating it in chat. -->\n\n"
+        "## Document index\n\n"
+        "<!-- One line per document: a link plus a one-sentence description, "
+        "grouped by kind under docs/teamwork/<kind>/. -->\n\n"
+        "No documents yet.\n"
+    )
+
+
+def write_project_docs_readme(root: Path) -> None:
+    path = root.joinpath(*DOCS_README_RELATIVE)
+    if path.exists() or path.is_symlink():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_managed_file(path, read_text(path), project_docs_readme())
 
 
 def replace_block(
@@ -113,7 +180,12 @@ def write_managed_file(path: Path, text: str, after: str) -> None:
 def write_agents(root: Path, label: str) -> None:
     path = root / "AGENTS.md"
     before = read_text(path)
-    write_managed_file(path, before, replace_block(before, managed_block(label)))
+    after = replace_block(before, managed_block(label))
+    if MANAGED_START not in before:
+        # Seed the placeholder once, for this project's own future edits, and
+        # never touch it again on later initialize/refresh-context runs.
+        after = seed_project_constraints(after)
+    write_managed_file(path, before, after)
 
 
 def bridge_links_to_agents(root: Path) -> bool:
@@ -150,14 +222,20 @@ def bridge_plan(root: Path) -> tuple[Path, str, str] | None:
         return None
     path = root / "CLAUDE.md"
     before = read_text(path)
-    if BRIDGE_START not in before and has_agents_import(before):
-        return None
-    return path, before, replace_block(
-        before, bridge_block(), BRIDGE_START, BRIDGE_END, ""
+    include_agents_import = not has_agents_import(text_outside_bridge_block(before))
+    after = replace_block(
+        before, bridge_block(include_agents_import), BRIDGE_START, BRIDGE_END, ""
     )
+    return path, before, after
 
 
 def write_claude_bridge(root: Path) -> None:
+    if bridge_links_to_agents(root):
+        print(
+            f"Teamwork: {root / 'CLAUDE.md'} is a symlink to AGENTS.md, so "
+            "docs/teamwork/README.md is not auto-imported for this project."
+        )
+        return
     planned = bridge_plan(root)
     if planned is None:
         return
@@ -205,6 +283,7 @@ def main() -> int:
         elif arguments.action in {"initialize", "refresh-context"}:
             write_agents(root, project_label(root, arguments.project_label))
             write_claude_bridge(root)
+            write_project_docs_readme(root)
             validate(root)
         else:
             validate(root)

@@ -74,6 +74,7 @@ install_claude() {
   install_claude_agent_set "$agent_root" "user Claude Code"
   echo "Claude static skills/agents: installed"
   install_claude_global_policy
+  install_claude_session_hook
   write_source_pointer --host claude
 }
 
@@ -108,6 +109,7 @@ install_all() {
   install_claude_agent_set "$claude_agent_root" "user Claude Code"
   echo "Claude static skills/agents: installed"
   install_claude_global_policy
+  install_claude_session_hook
   write_source_pointer --host codex --host cursor --host claude
 }
 

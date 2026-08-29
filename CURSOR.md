@@ -42,24 +42,38 @@ not add a second implementation of any of them:
   `teamwork-collaborate`.
 - **Explore** and **AskQuestion** handle live search and batched questions
   directly; a question batch collects input and does not by itself create
-  a document.
-- `.cursor/plans` remains the host editing surface. After the user accepts
-  a reusable result, the global policy's Teamwork bridge owns when that
-  write fires, which of the four document kinds it belongs to, and the
-  path it reuses (see README.md); a project's own `AGENTS.md` Teamwork
-  block only adds project-specific detail on top. Root writes it there. If
-  the User Rule above is absent, the project `AGENTS.md` block is still the
-  minimum shared bridge.
+  a document. Neither reads `docs/teamwork/README.md` for you — open it
+  yourself before work that depends on what this project already decided,
+  concluded, or tried.
+- `.cursor/plans` remains the host editing surface. The global policy's
+  project-context contract owns when a write fires, which document kind it
+  belongs to, and the path it reuses (see README.md); a project's own
+  `AGENTS.md` Teamwork block only adds project-specific detail on top. Root
+  writes it
+  there. If the User Rule above is absent, the project `AGENTS.md` block is
+  still the minimum shared bridge.
 
 ## Parallel execution surface
 
-`cursor-agent --help` exposes no fan-out subcommand either. As on Codex, an
-independent line is carried by dispatching the installed role agents under
-`~/.cursor/agents`, one per line, so Worker is the primary vehicle here
-rather than a fallback.
+`cursor-agent --help` exposes no fan-out subcommand. An independent line is
+carried by dispatching the installed role agents under `~/.cursor/agents`,
+one per line, so Worker is the primary vehicle here rather than a fallback.
+`-w, --worktree [name]` starts a line in an isolated git worktree under
+`~/.cursor/worktrees/`, which is how two lines writing the same repository
+stay off each other. The `worker` subcommand starts a private cloud worker
+that spends the user's own environment and account, so it is proposed with
+its cost, never started on the agent's own judgement.
 
 ## Roles and models
 
 Cursor roles pin `model` by job; `--profile` does not apply to Cursor and
 the Cursor install does not rewrite these pins. Challenger and Worker pin
 Grok 4.6 Fast at high effort; Writer pins Grok 4.6 Fast at medium effort.
+
+Cursor's own choice here is coarser than a per-dispatch one: each role
+pins one fixed model, and a dispatch does not vary it per line. The
+global policy's delegation rules still name the underlying cost/speed/
+quality trade-off for balancing lines; on this host that surfaces as how
+many Worker lines to run rather than varying any single line's tier. This
+file does not pin that trade-off to a specific model name or generation,
+since Cursor's own roster changes independently of this contract.

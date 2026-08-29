@@ -12,17 +12,18 @@ surfaces and never block Codex work.
   Public docs stay outcome-focused; they do not restate the method.
 - `policy/teamwork-global.md` exclusively owns cross-project working rules
   that must hold before the Skill loads, plus the minimum routing,
-  delegation, and the full persistence contract (when a checkpoint fires,
-  kind priority and identity, path reuse, and document shape). A rule the
-  Skill body already carries does not belong there. Do not duplicate a
-  policy rule inside the Skill body, a role template (`templates/*-agents/`),
+  delegation, and the full project-context contract — both sides of it:
+  when to read a project's `docs/teamwork/README.md`, and when a write
+  fires, which kind it is, how a subject reuses a path, and the document
+  shape. A rule the Skill body already carries does not belong there. Do
+  not duplicate a policy rule inside the Skill body, a role template (`templates/*-agents/`),
   a test, or a host adapter doc (`CODEX.md` / `CURSOR.md` / `CLAUDE.md`) —
   those may name host tools and installer mechanics, but the working rule
   itself lives only in `policy/teamwork-global.md`. `README.md` owns the
-  three-layer split's rationale; it points at the policy-owned persistence
-  contract rather than restating the closed document-kind set or the path
-  shape. Commit a change to that file separately from a release commit,
-  carrying only the edits needed to keep the tree green.
+  three-layer split's rationale; it points at the policy-owned
+  project-context contract rather than restating the closed document-kind
+  set or the path shape. Commit a change to that file separately from a
+  release commit, carrying only the edits needed to keep the tree green.
 - Shell scripts use Bash with `set -euo pipefail`, quoted variables, and
   arrays. `skills/teamwork-collaborate/SKILL.md` frontmatter has only `name`
   and `description`, and `description` starts with `Use when`.
@@ -57,5 +58,5 @@ surfaces and never block Codex work.
 
 - Project label: `teamwork-simplify`.
 - Teamwork adds no required project-local workflow or state. It creates no empty directory, schema, or mandatory stage chain. Native host modes stay in charge. Follow this project's normal instructions and invoke a named Skill only when its trigger matches.
-- This project's Teamwork persistence root is `docs/teamwork/` at the repository root; the global policy's Teamwork bridge owns the contract itself, and this block only adds project-specific detail.
+- This project's Teamwork context lives under `docs/teamwork/` at the repository root, with `docs/teamwork/README.md` as the reading-side entry point; the global policy's project-context contract owns it, and this block only adds project-specific detail.
 <!-- TEAMWORK_PROJECT_END -->

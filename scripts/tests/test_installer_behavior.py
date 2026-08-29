@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -17,6 +19,7 @@ from harness import (  # noqa: E402
     CURSOR_POLICY_END,
     CURSOR_POLICY_START,
     POINTER_RELATIVE,
+    ROOT,
     TeamworkCase,
     digest,
     snapshot,
@@ -341,6 +344,160 @@ class CrossHostParityTests(TeamworkCase):
             ("cursor", cursor_block),
         ):
             self.assertIn(source, block, f"{host} policy block does not carry the shared body")
+
+
+class DoctorContractDriftTests(TeamworkCase):
+    """The doctor runs against a real initialized project and reports drift.
+
+    Every fixture here is built by the real `init-project` target and then read
+    back through the real `scripts/doctor.py`; the assertions are on which
+    drift the doctor names and on which file it names, never on how it words it.
+    """
+
+    def initialized_project(self) -> Path:
+        project = self.temp_dir("project")
+        self.install_ok("--project-root", str(project), "init-project")
+        return project
+
+    def write_documents(self, project: Path, *relatives: str) -> None:
+        for relative in relatives:
+            self.write(
+                project / "docs" / "teamwork" / relative,
+                f"---\nstatus: active\n---\n\n# {relative}\n",
+            )
+
+    def write_index(self, project: Path, *relatives: str) -> None:
+        lines = ["# Project Teamwork Documents\n", "\n## Document index\n\n"]
+        lines += [f"- [{name}]({name}) - what it holds.\n" for name in relatives]
+        self.write(project / "docs" / "teamwork" / "README.md", "".join(lines))
+
+    def doctor(self, project: Path) -> list[dict]:
+        done = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "doctor.py"),
+                "--project",
+                str(project),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=str(self.workdir),
+            env={
+                "HOME": str(self.home),
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
+                "LANG": "C",
+                "PYTHONDONTWRITEBYTECODE": "1",
+            },
+        )
+        self.assertIn(
+            done.returncode,
+            (0, 1),
+            f"doctor could not run\nstdout:\n{done.stdout}\nstderr:\n{done.stderr}",
+        )
+        report = json.loads(done.stdout)
+        self.assertEqual(len(report["projects"]), 1, done.stdout)
+        return report["projects"][0]["findings"]
+
+    def test_a_freshly_initialized_project_carries_no_drift(self) -> None:
+        project = self.initialized_project()
+
+        self.assertEqual(self.doctor(project), [])
+
+    def test_an_index_entry_with_no_document_on_disk_is_reported_dead(self) -> None:
+        project = self.initialized_project()
+        self.write_documents(project, "records/kept.md")
+        self.write_index(project, "records/kept.md", "records/gone.md")
+
+        findings = self.doctor(project)
+
+        self.assertEqual([item["check"] for item in findings], ["index-dead-entry"])
+        self.assertEqual(findings[0]["severity"], "error")
+        self.assertIn("records/gone.md", findings[0]["message"])
+        self.assertNotIn("records/kept.md", findings[0]["message"])
+
+    def test_a_document_the_index_never_registered_is_reported(self) -> None:
+        project = self.initialized_project()
+        self.write_documents(project, "records/kept.md", "plans/unlisted.md")
+        self.write_index(project, "records/kept.md")
+
+        findings = self.doctor(project)
+
+        self.assertEqual([item["check"] for item in findings], ["index-unregistered"])
+        self.assertIn("plans/unlisted.md", findings[0]["message"])
+        self.assertNotIn("records/kept.md", findings[0]["message"])
+        # Severity is behavior, not labelling: the session-start hook prints
+        # errors only, so a pre-contract document staying a warning is what
+        # keeps an unmigrated project from shouting on every start.
+        self.assertEqual(findings[0]["severity"], "warn")
+
+    def test_an_index_that_matches_disk_reports_nothing(self) -> None:
+        project = self.initialized_project()
+        self.write_documents(project, "records/kept.md", "plans/listed.md")
+        self.write_index(project, "records/kept.md", "docs/teamwork/plans/listed.md")
+
+        self.assertEqual(self.doctor(project), [])
+
+    def test_a_directory_outside_the_closed_kind_set_is_reported(self) -> None:
+        project = self.initialized_project()
+        self.write_documents(project, "notes/idea.md", "records/kept.md")
+        self.write_index(project, "records/kept.md")
+
+        findings = self.doctor(project)
+
+        self.assertEqual([item["check"] for item in findings], ["kind-outside-contract"])
+        self.assertIn("notes", findings[0]["message"])
+
+    def test_a_project_with_no_readme_index_reports_no_drift(self) -> None:
+        # docs/teamwork/README.md is init-project's own navigation convenience,
+        # not a contract requirement (see policy/teamwork-global.md): a project
+        # that never had one, or dropped it, is not in drift for that alone.
+        project = self.initialized_project()
+        self.write_documents(project, "records/kept.md")
+        (project / "docs" / "teamwork" / "README.md").unlink()
+
+        self.assertEqual(self.doctor(project), [])
+
+    def test_doctor_never_exits_2_from_contract_parsing_on_a_real_project(self) -> None:
+        # scripts/doctor.py reads policy/teamwork-global.md's kind table
+        # through this checkout's real path, not a fixture copy. A format
+        # change to that table (bullets -> table, as actually happened once)
+        # must degrade to a wrong finding, never crash the whole run with
+        # exit 2 -- that blind spot let validate.sh stay green while
+        # doctor.py was completely unable to run.
+        project = self.initialized_project()
+        done = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "doctor.py"), "--project", str(project)],
+            capture_output=True,
+            text=True,
+            cwd=str(self.workdir),
+            env={
+                "HOME": str(self.home),
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
+                "LANG": "C",
+                "PYTHONDONTWRITEBYTECODE": "1",
+            },
+        )
+        self.assertIn(
+            done.returncode,
+            (0, 1),
+            f"doctor exited {done.returncode} (contract parsing likely failed)\n"
+            f"stdout:\n{done.stdout}\nstderr:\n{done.stderr}",
+        )
+
+    def test_the_doctor_writes_nothing_while_reporting_drift(self) -> None:
+        project = self.initialized_project()
+        self.write_documents(project, "records/kept.md")
+        self.write_index(project, "records/kept.md", "records/gone.md")
+        before_home = snapshot(self.home)
+        before_project = snapshot(project)
+
+        self.assertNotEqual(self.doctor(project), [])
+
+        self.assertEqual(before_home, snapshot(self.home))
+        self.assertEqual(before_project, snapshot(project))
 
 
 class CommandLineTests(TeamworkCase):

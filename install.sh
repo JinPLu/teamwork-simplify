@@ -10,9 +10,12 @@ source "$ROOT/scripts/install/policy.sh"
 source "$ROOT/scripts/install/profiles.sh"
 # shellcheck source=scripts/install/targets.sh
 source "$ROOT/scripts/install/targets.sh"
+# shellcheck source=scripts/install/hooks.sh
+source "$ROOT/scripts/install/hooks.sh"
 
 TARGET=""
 PROJECT_ROOT=""
+DOCTOR_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -59,7 +62,20 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 2
       ;;
-    codex|cursor|claude|all|update|init-project|codex-agents|cursor-agents|claude-agents|codex-policy|cursor-policy|cursor-policy-copy|claude-policy)
+    doctor)
+      if [[ -n "$TARGET" ]]; then
+        echo "Specify only one install target." >&2
+        usage
+        exit 2
+      fi
+      TARGET="doctor"
+      shift
+      # doctor owns its own flags (--json, --project PATH); pass them straight
+      # through instead of teaching this parser a second flag vocabulary.
+      DOCTOR_ARGS=("$@")
+      break
+      ;;
+    codex|cursor|claude|all|update|init-project|codex-agents|cursor-agents|claude-agents|codex-policy|cursor-policy|cursor-policy-copy|claude-policy|claude-hook|remove)
       if [[ -n "$TARGET" ]]; then
         echo "Specify only one install target." >&2
         usage
@@ -144,6 +160,15 @@ case "$EFFECTIVE_TARGET" in
     ;;
   claude-policy)
     write_teamwork_claude_global_policy
+    ;;
+  claude-hook)
+    install_claude_session_hook
+    ;;
+  remove)
+    remove_claude_session_hook
+    ;;
+  doctor)
+    run_doctor "${DOCTOR_ARGS[@]+"${DOCTOR_ARGS[@]}"}"
     ;;
   *)
     usage
