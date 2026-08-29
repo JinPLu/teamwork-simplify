@@ -7,45 +7,43 @@ updated: <YYYY-MM-DD>
 
 # Discussion: <subject>
 
-## Identity and final goal
-
-- Subject identity: <final goal plus subject>
-- Final goal: <owner-certified goal>
+- Subject identity: <the final goal plus this subject>
 - Authoritative owner: <owner>
+
+## Where this stands
+
+<the current synthesis: what is settled, what is still being decided>
 
 ## Decision map
 
-<goal to current stage to independent questions to next dependent stage; a
-concise tree or list is enough when the option space is simple>
-
-## Current stage
-
-<stage and settled context>
+<goal to current stage to independent questions to the next dependent stage;
+a short list is enough when the option space is simple>
 
 ## Current question batch
 
-<all independent, valuable questions for this stage; no fixed count>
+<every independent question this stage owns; no fixed count>
 
 ## Options and recommendation
 
-<meaningfully different options and owner-certified recommendation>
+<meaningfully different options, each with benefit, cost, assumption, and what
+it commits to; then the recommendation and why the evidence distinguishes it>
 
 ## Decisions and open points
 
-<user decisions, unresolved points, and next authorized action>
+<what the user decided, what stays open, the next authorized action>
 
-## User quotes
+## User's own wording
 
-<user's original wording, especially recorded rejections and decisions>
+<the user's words, especially decisions and rejections — kept verbatim>
 
 ## Working understanding
 
-<model understanding; do not write this as the user's wording>
+<your reading of it; never written as the user's wording>
 
 ## History
 
-<Append only. Never rewrite or remove; a correction is a new dated entry.>
+<Append only. A correction is a new dated entry, never an edit to an old one.>
 
-### <date/time — semantic change>
+### <date — what changed semantically>
 
-<decision or synthesis delta>
+<the delta>

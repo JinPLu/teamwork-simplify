@@ -7,13 +7,14 @@ updated: <YYYY-MM-DD>
 
 # Plan: <selected outcome>
 
-## Selected direction and acceptance
-
 - Subject identity: <the selected outcome>
-- Authoritative owner: <planning owner>
-- Selected direction: <already-settled direction>
-- Observable acceptance: <the acceptance signal>
-- Scope and protected behavior: <constraints>
+- Authoritative owner: <owner>
+
+## Direction and acceptance
+
+- Selected direction: <the already-settled direction>
+- Observable acceptance: <the signal that says this is done, and how it is seen>
+- Scope and protected behavior: <what must not change>
 
 ## Settled facts
 
@@ -21,26 +22,30 @@ updated: <YYYY-MM-DD>
 
 ## Steps
 
-1. <outcome-sized step, dependency order, owner, exact target, produced result>
+1. <outcome-sized step, in dependency order — owner, exact target, what it produces>
 
-## Parallel lines and Worker handoffs
+## Parallel lines
 
-| Line | Objective | Owned scope | Settled constraints | Available evidence | Requested return |
-| --- | --- | --- | --- | --- | --- |
-| <line> | <objective> | <disjoint paths> | <constraints> | <evidence> | <return> |
+<The split verdict, stated either way: which steps have no ordering dependency
+and disjoint owned scopes, or the dependency or shared path that prevents a
+split. Name the host's own parallel surface in the host's own terms.>
+
+| Line | Objective | Owned scope | Settled constraints | Available evidence | Requested return | Model tier |
+| --- | --- | --- | --- | --- | --- | --- |
+| <line> | <objective> | <disjoint paths> | <constraints> | <evidence> | <return> | <tier and why this line earns it> |
 
 ## Verification
 
-<real observable acceptance signal and nearest useful checks>
+<the real observable acceptance signal and the nearest useful checks>
 
 ## Stop and replan conditions
 
-<conditions that require stopping or replanning this plan>
+<what forces this plan to stop or be replanned>
 
 ## History
 
-<Append only. Never rewrite or remove; a correction is a new dated entry.>
+<Append only. A correction is a new dated entry, never an edit to an old one.>
 
-### <date/time — plan revision>
+### <date — what changed semantically>
 
-<certified plan delta, not execution activity>
+<the delta>

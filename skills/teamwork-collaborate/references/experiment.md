@@ -7,35 +7,35 @@ updated: <YYYY-MM-DD>
 
 # Experiment: <subject>
 
+- Subject identity: <the claim under test plus the setup below>
+
 ## Claim to verify
 
 <one falsifiable sentence>
 
-- Subject identity: <the claim under test plus the setup below>
-
 ## Setup
 
 - Data: <dataset>
-- Model: <model / checkpoint>
+- Model: <model or checkpoint>
 - Parameters: <config, seeds, hyperparameters>
-- Reproduce command: <exact command>
+- Reproduce command: <the exact command>
 
 ## What actually ran
 
-<what was actually executed; deviations from the setup above>
+<what was executed, and where it deviated from the setup above>
 
 ## Result numbers
 
-<observed numbers, with error-bar provenance where applicable>
+<the observed numbers, with error-bar provenance where it applies>
 
-## Conclusion or open
+## Conclusion or open question
 
-<conclusion licensed by the observed result, or the open question>
+<the conclusion the observed result licenses, or the question left open>
 
 ## History
 
-<Append only. Never rewrite or remove; a correction is a new dated entry.>
+<Append only. A correction is a new dated entry, never an edit to an old one.>
 
-### <date/time — semantic change>
+### <date — what changed semantically>
 
-<result or conclusion delta>
+<the delta>

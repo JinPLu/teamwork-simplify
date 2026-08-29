@@ -7,18 +7,16 @@ updated: <YYYY-MM-DD>
 
 # Record: <subject>
 
-## Identity
-
-- Subject identity: <stable continuing objective>
+- Subject identity: <the continuing objective this result belongs to>
 - Authoritative owner: <owner>
 
 ## Result
 
-<directly observed result; label complete, partial, or unobserved>
+<the directly observed result; label it complete, partial, or unobserved>
 
 ## Evidence
 
-<evidence supporting the observed result>
+<what supports the observed result>
 
 ## Unknowns
 
@@ -26,12 +24,12 @@ updated: <YYYY-MM-DD>
 
 ## Blockers and release conditions
 
-<exact blocker, or none observed; the condition that releases it>
+<the exact blocker, or none observed, and what would release it>
 
 ## History
 
-<Append only. Never rewrite or remove; a correction is a new dated entry.>
+<Append only. A correction is a new dated entry, never an edit to an old one.>
 
-### <date/time — semantic change>
+### <date — what changed semantically>
 
-<result-state delta, not an activity log>
+<the delta>
