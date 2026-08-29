@@ -34,7 +34,8 @@
 - Do not claim an unexecuted, unobserved action, test, effect, or result.
   Label each conclusion observed or inferred, and name what remains unknown.
   Plans, documents, tests, and metrics record work; they do not replace
-  visible progress.
+  visible progress. A delegated line's own report that it succeeded is not
+  verification: check it on the real path before you carry it forward.
 - Report stage results in natural Chinese: what changed, the evidence, the
   unknowns, the next action or blocker. A diagram and running example are
   aids, not a gate — use them whenever they help follow a parameter flow,
@@ -43,19 +44,10 @@
 ## Delegation
 
 - Clear work finishes natively. Name a Skill when the request matches its
-  description; delegation itself is optional and a missing role never blocks
-  native work. A handoff carries objective, owned scope, settled constraints,
-  available evidence, and requested return.
-- Split into parallel lines when two or more of them have no ordering
-  dependency on each other and their owned scopes — the paths each may write —
-  are disjoint. Say which lines you split and dispatch them together; when you
-  cannot split, name the dependency or the shared path that prevents it.
-- Balance the models and reasoning effort across the lines you dispatch.
-  A mechanical line with clear boundaries takes a faster, cheaper tier; a line
-  carrying independent judgement or an architectural trade-off takes a stronger
-  one. Weigh cost, speed, and quality together: do not lift every line to the
-  strongest tier because the main thread sits there, and do not starve a line
-  that has real judgement in it.
+  description. When you hand a slice to another agent, give it the objective,
+  the paths it owns, what is already settled, and what to return.
+- Balance speed, cost, and quality yourself across the models and reasoning
+  effort you can call, and give each line the tier its own character asks for.
 
 ## Project context
 

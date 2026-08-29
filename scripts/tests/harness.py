@@ -30,10 +30,6 @@ CURSOR_POLICY_END = "<!-- TEAMWORK_CURSOR_GLOBAL_END -->"
 PROJECT_START = "<!-- TEAMWORK_PROJECT_START -->"
 PROJECT_END = "<!-- TEAMWORK_PROJECT_END -->"
 
-# Written on every install, and deliberately carries an install timestamp, so
-# it is excluded from byte-identity comparisons across runs.
-POINTER_RELATIVE = ".teamwork/install.json"
-
 CHECKOUT_IGNORE = shutil.ignore_patterns(".git", "__pycache__", "*.pyc", ".DS_Store")
 
 

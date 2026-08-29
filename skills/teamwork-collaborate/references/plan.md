@@ -24,15 +24,25 @@ updated: <YYYY-MM-DD>
 
 1. <outcome-sized step, in dependency order — owner, exact target, what it produces>
 
-## Parallel lines
+## Execution
 
-<The split verdict, stated either way: which steps have no ordering dependency
-and disjoint owned scopes, or the dependency or shared path that prevents a
-split. Name the host's own parallel surface in the host's own terms.>
+**Dependency structure**
 
-| Line | Objective | Owned scope | Settled constraints | Available evidence | Requested return | Model tier |
-| --- | --- | --- | --- | --- | --- | --- |
-| <line> | <objective> | <disjoint paths> | <constraints> | <evidence> | <return> | <tier and why this line earns it> |
+<Which steps depend on which; which of them write the same paths; anything
+that must finish before something else can start.>
+
+**Done signal per step**
+
+<What observably counts as done for each step — not "implemented", but the
+thing you can look at.>
+
+**Launch line**
+
+<The one line that starts the work: which of the host's own surfaces to run it
+on, what goes in parallel, and to balance speed, cost, and quality across the
+models available — e.g. "run steps 2-4 in parallel, balancing model and effort
+per line." A launch instruction, not a schedule: how many lines and which tier
+each one gets is seen when the work runs.>
 
 ## Verification
 

@@ -16,8 +16,7 @@ surfaces and never block Codex work.
   when to read a project's `docs/teamwork/README.md`, and when a write
   fires, which kind it is, how a subject reuses a path, and the document
   shape. A rule the Skill body already carries does not belong there. Do
-  not duplicate a policy rule inside the Skill body, a role template (`templates/*-agents/`),
-  a test, or a host adapter doc (`CODEX.md` / `CURSOR.md` / `CLAUDE.md`) —
+  not duplicate a policy rule inside the Skill body, a test, or a host adapter doc (`CODEX.md` / `CURSOR.md` / `CLAUDE.md`) —
   those may name host tools and installer mechanics, but the working rule
   itself lives only in `policy/teamwork-global.md`. `README.md` owns the
   three-layer split's rationale; it points at the policy-owned
@@ -27,10 +26,9 @@ surfaces and never block Codex work.
 - Shell scripts use Bash with `set -euo pipefail`, quoted variables, and
   arrays. `skills/teamwork-collaborate/SKILL.md` frontmatter has only `name`
   and `description`, and `description` starts with `Use when`.
-- Agent delegation to Challenger, Worker, or Writer is optional unless the
-  user explicitly requires independent work. A handoff carries only
-  objective, scope, settled constraints, evidence, and requested return.
-  A missing role never triggers Update automatically.
+- Teamwork installs no agents and no hooks, and adds no orchestration of its
+  own. Execution runs on the host's own subagent and fan-out surfaces; the
+  method stops at the plan.
 - Project-local Teamwork setup is one concise managed `AGENTS.md` block plus
   a small `CLAUDE.md` import. It has no document database, schema, case
   lifecycle, or migration gate.
@@ -40,7 +38,8 @@ surfaces and never block Codex work.
 - Run `./scripts/validate.sh` for the small local smoke suite. Use
   `./scripts/validate.sh --release` only for explicit release preparation.
 - `init-project` maintains the project instruction block;
-  `./install.sh update` refreshes an existing checkout's installed surfaces.
+  To refresh an install, run `./install.sh <host>` again from the checkout
+  you want.
 
 ## Releases
 

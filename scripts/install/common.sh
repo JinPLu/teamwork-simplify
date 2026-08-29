@@ -1,20 +1,14 @@
 INSTALL_MODE="${TEAMWORK_INSTALL_MODE:-copy}"
-CODEX_PROFILE="${TEAMWORK_CODEX_PROFILE:-performance-first}"
-CODEX_PROFILE_SOURCE=""
-if [[ -n "${TEAMWORK_CODEX_PROFILE:-}" ]]; then
-  CODEX_PROFILE_SOURCE="env"
-fi
-CURSOR_SKILL_PROFILE_TOKEN="inherit"
-CLAUDE_SKILL_PROFILE_TOKEN="inherit"
+# Written next to .teamwork-version inside an installed skill root. The pair is
+# what marks that root as this product's; the token itself carries no meaning
+# any more, and the ownership guard only checks that both files exist.
+SKILL_ROOT_MARKER_TOKEN="inherit"
 CODEX_USER_SKILLS_ROOT="$HOME/.agents/skills"
 PKG_VERSION="unknown"
 if [[ -f "$ROOT/VERSION" ]]; then
   PKG_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 fi
 SKILLS=(teamwork-collaborate)
-CURSOR_SKILLS=(teamwork-collaborate)
-CLAUDE_SKILLS=(teamwork-collaborate)
-CODEX_SKILLS=(teamwork-collaborate)
 RETIRED_SKILLS=(
   grill-me
   teamwork-design
@@ -31,160 +25,52 @@ RETIRED_SKILLS=(
   teamwork-update
 )
 LEGACY_CODEX_ROUTER_SKILL="teamwork"
-CLAUDE_AGENTS=(challenger worker writer)
-CURSOR_AGENTS=(challenger worker writer)
-CODEX_AGENTS=(teamwork-challenger teamwork-worker teamwork-writer)
-RETIRED_CLAUDE_AGENTS=(designer plan-reviewer explorer researcher planner reviewer debugger)
-RETIRED_CURSOR_AGENTS=(designer plan-reviewer explorer debugger researcher planner reviewer)
-RETIRED_CODEX_AGENTS=(teamwork-designer teamwork-plan-reviewer teamwork-researcher teamwork-planner teamwork-reviewer teamwork-debugger teamwork-explorer)
+# Teamwork installs no agents. Every name below was installed by an earlier
+# release and is removed on the next install, but only from a file this product
+# is recognized to have written — see teamwork_*_agent_file_is_recognized.
+RETIRED_CLAUDE_AGENTS=(challenger worker writer designer plan-reviewer explorer researcher planner reviewer debugger)
+RETIRED_CURSOR_AGENTS=(challenger worker writer designer plan-reviewer explorer debugger researcher planner reviewer)
+RETIRED_CODEX_AGENTS=(teamwork-challenger teamwork-worker teamwork-writer teamwork-designer teamwork-plan-reviewer teamwork-researcher teamwork-planner teamwork-reviewer teamwork-debugger teamwork-explorer)
 
 usage() {
   cat <<'USAGE'
 Usage:
-  ./install.sh [--copy|--link] \
-    cursor|cursor-agents|cursor-policy|cursor-policy-copy
-
-  ./install.sh [--copy|--link] \
-    claude|claude-agents|claude-policy
-
+  ./install.sh [--copy|--link] codex|cursor|claude|all
+  ./install.sh [--copy|--link] codex-policy|cursor-policy|cursor-policy-copy|claude-policy
+  ./install.sh --project-root PATH init-project
   ./install.sh doctor [--project PATH] [--json]
-  ./install.sh remove
-
-  ./install.sh [--copy|--link] [--profile performance-first|cost-first] \
-    [--project-root PATH] \
-    codex|all|update|init-project|codex-agents|codex-policy
 
 Targets:
-  codex          Install Codex skills/agents from this checkout and separately
-                 activate the managed Codex global policy
-                 (script default target)
-  cursor         Compatibility/development target: install skills/agents and
-                 report the separate manual Cursor User Rules activation action
-  claude         Compatibility/development target: install skills/agents and
-                 separately activate the managed Claude global policy
-  all            Compatibility/development target: install static surfaces for
-                 all hosts, activate observable Codex/Claude policy, and
-                 report Cursor policy as partial
-  update         Refresh Teamwork from the checkout recorded in
-                 ~/.teamwork/install.json, for every host that pointer
-                 records; fails when the pointer is missing or unusable
-  init-project   Add or refresh one concise Teamwork block in a project's
-                 AGENTS.md, plus the small CLAUDE.md import that lets a host
-                 which reads CLAUDE.md load it, without changing global
-                 settings
-  codex-agents   Install Teamwork Codex custom agents to ~/.codex/agents
-  cursor-agents  Compatibility/development: install Teamwork Cursor subagents
-                 to ~/.cursor/agents
-  claude-agents  Compatibility/development: install Teamwork Claude subagents
-                 to ~/.claude/agents
+  codex          Install the Skill from this checkout and activate the managed
+                 Codex global policy (script default target)
+  cursor         Install the Skill and report the separate manual Cursor User
+                 Rules activation action
+  claude         Install the Skill and activate the managed Claude global policy
+  all            Install for all three hosts
+  init-project   Add or refresh one project's Teamwork block in AGENTS.md, the
+                 small CLAUDE.md bridge, and docs/teamwork/README.md, without
+                 changing global settings
   codex-policy   Print the canonical policy in its Codex managed wrapper
-  cursor-policy  Compatibility/development: print the Teamwork Cursor global
-                 policy block for one Cursor user rule
+  cursor-policy  Print the Teamwork Cursor global policy block for one user rule
   cursor-policy-copy
-                 Compatibility/development: copy that block to the clipboard
-                 for the manual Settings -> Rules paste fallback
-  claude-policy  Compatibility/development: print the canonical policy in its
-                 Claude managed wrapper
+                 Copy that block to the clipboard for the manual
+                 Settings -> Rules paste
+  claude-policy  Print the canonical policy in its Claude managed wrapper
   doctor         Read-only health check of the installed surfaces and of every
                  project on this machine that carries a Teamwork block or a
-                 docs/teamwork/ tree; writes nothing, exits non-zero when it
-                 found an error. Accepts --project PATH and --json
+                 docs/teamwork/ tree; writes nothing, exits non-zero on an error
 
-Default mode is --copy. Clone this repository and run ./install.sh <host>.
-Official support and release qualification are Codex-only. Use --link for local
-development when installs should track this checkout.
-`--project-root` is valid with `init-project`.
+Default mode is --copy; use --link for local development when installs should
+track this checkout. To refresh an install, run this script again from the
+checkout you want.
+
+Teamwork installs no agents and no hooks. Agents an earlier release installed
+are removed on the next install, and only when the file is recognized as one
+this product wrote.
 
 Teamwork never installs, configures, or checks external MCP servers or compute
 tools. Install and configure optional tools through their own documentation.
-
-Profile flags apply to Codex targets only.
-Cursor and Claude Code targets reject --profile, --performance-first, and
---cost-first.
-Profile defaults to performance-first for Codex; choose cost-first explicitly
-when needed.
-On Codex, performance-first uses Sol/high for Challenger, Sol/medium for
-Worker, and Luna/high for Writer.
-On Codex, cost-first uses Luna/high for Challenger, Worker, and Writer.
-Claude Code agents pick models by job and ignore --profile: Challenger pins
-Opus at xhigh; Worker pins Sonnet at high; Writer pins Sonnet at medium.
-Claude Code skill-root ownership writes `.teamwork-profile` with the
-host-neutral token `inherit`.
-Cursor agents pick models by job: Challenger and Worker pin Grok 4.6 Fast at
-high effort; Writer pins Grok 4.6 Fast at medium effort. `--profile` still
-does not apply to Cursor. Cursor skill-root ownership still writes
-`.teamwork-profile` with the host-neutral token `inherit`.
 USAGE
-}
-
-
-teamwork_target_is_cursor_only() {
-  case "${1:-}" in
-    cursor|cursor-agents|cursor-policy|cursor-policy-copy)
-      return 0
-      ;;
-  esac
-  return 1
-}
-
-teamwork_target_is_claude_only() {
-  case "${1:-}" in
-    claude|claude-agents|claude-policy)
-      return 0
-      ;;
-  esac
-  return 1
-}
-
-teamwork_target_uses_codex_profile() {
-  case "${1:-}" in
-    codex|all|update|codex-agents)
-      return 0
-      ;;
-  esac
-  return 1
-}
-
-validate_codex_profile() {
-  case "$CODEX_PROFILE" in
-    performance-first|cost-first)
-      ;;
-    *)
-      echo "Unknown profile: $CODEX_PROFILE" >&2
-      usage
-      exit 2
-      ;;
-  esac
-}
-
-
-preflight_agent_destination() {
-  local root="$1"
-  local extension="$2"
-  local label="$3"
-  shift 3
-  local agent path
-  if [[ -e "$root" && ! -d "$root" ]]; then
-    echo "$label agent path is not a directory: $root" >&2
-    return 1
-  fi
-  if [[ -d "$root" && ( ! -w "$root" || ! -x "$root" ) ]]; then
-    echo "$label agent path is not writable: $root" >&2
-    return 1
-  fi
-  for agent in "$@"; do
-    path="$root/$agent.$extension"
-    if [[ -e "$path" || -L "$path" ]]; then
-      if [[ ! -f "$path" || ! -w "$path" ]]; then
-        echo "$label agent is not a writable regular file: $path" >&2
-        return 1
-      fi
-      if ! teamwork_markdown_agent_file_is_recognized "$path" "$agent"; then
-        echo "$label agent $path is not a recognized Teamwork-owned profile; refusing to replace it." >&2
-        return 1
-      fi
-    fi
-  done
 }
 
 
@@ -361,8 +247,6 @@ install_agent_file() {
 install_skill_set() {
   local dest_root="$1"
   local label="$2"
-  local profile_token="${3:-$CODEX_PROFILE}"
-  local host="${4:-}"
   local skill retired
 
   preflight_teamwork_skill_root "$dest_root" "$label skill root"
@@ -370,38 +254,63 @@ install_skill_set() {
   for retired in "${RETIRED_SKILLS[@]}"; do
     remove_retired_skill "$dest_root" "$retired"
   done
-
-  case "$host" in
-    cursor)
-      for skill in "${CURSOR_SKILLS[@]}"; do
-        install_skill_dir "$ROOT/skills/$skill" "$dest_root/$skill"
-      done
-      ;;
-    claude)
-      for skill in "${CLAUDE_SKILLS[@]}"; do
-        install_skill_dir "$ROOT/skills/$skill" "$dest_root/$skill"
-      done
-      ;;
-    codex)
-      for skill in "${CODEX_SKILLS[@]}"; do
-        install_skill_dir "$ROOT/skills/$skill" "$dest_root/$skill"
-      done
-      ;;
-    "")
-      for skill in "${SKILLS[@]}"; do
-        install_skill_dir "$ROOT/skills/$skill" "$dest_root/$skill"
-      done
-      ;;
-    *)
-      echo "Unknown skill-set host: $host" >&2
-      return 1
-      ;;
-  esac
+  for skill in "${SKILLS[@]}"; do
+    install_skill_dir "$ROOT/skills/$skill" "$dest_root/$skill"
+  done
 
   printf '%s\n' "$PKG_VERSION" > "$dest_root/.teamwork-version"
-  printf '%s\n' "$profile_token" > "$dest_root/.teamwork-profile"
+  printf '%s\n' "$SKILL_ROOT_MARKER_TOKEN" > "$dest_root/.teamwork-profile"
 
   echo "Installed $label skills under: $dest_root ($INSTALL_MODE)"
+}
+
+# An agent file is this product's only when its own content says so. Name
+# matching is not enough: a user may keep an agent whose name resembles a
+# retired Teamwork one, and that file must survive untouched.
+teamwork_codex_agent_file_is_recognized() {
+  local path="$1"
+  local agent="$2"
+  local expected_name
+  expected_name="${agent//-/_}"
+  [[ -f "$path" ]] \
+    && grep -q "^name = \"$expected_name\"$" "$path" \
+    && grep -Eq 'You are (the )?Teamwork ' "$path"
+}
+
+teamwork_markdown_agent_file_is_recognized() {
+  local path="$1"
+  local agent="$2"
+  [[ -f "$path" ]] \
+    && grep -Fqx "name: $agent" "$path" \
+    && grep -Eq '^You are (the )?Teamwork ' "$path"
+}
+
+remove_retired_agent_files() {
+  local platform="$1"
+  local root="$2"
+  shift 2
+  local agent extension path
+
+  case "$platform" in
+    codex) extension=toml ;;
+    cursor|claude) extension=md ;;
+    *) return 1 ;;
+  esac
+
+  [[ -d "$root" ]] || return 0
+  for agent in "$@"; do
+    path="$root/$agent.$extension"
+    [[ -e "$path" || -L "$path" ]] || continue
+    if [[ "$platform" == "codex" ]] && teamwork_codex_agent_file_is_recognized "$path" "$agent"; then
+      rm -f "$path"
+      echo "Removed retired Teamwork agent: $path"
+    elif [[ "$platform" != "codex" ]] && teamwork_markdown_agent_file_is_recognized "$path" "$agent"; then
+      rm -f "$path"
+      echo "Removed retired Teamwork agent: $path"
+    else
+      echo "Preserved unrecognized retired agent file: $path" >&2
+    fi
+  done
 }
 
 codex_home_path() {
@@ -430,61 +339,6 @@ remove_legacy_plugin_activation() {
     echo "Leftover plugin activation path is not a regular file: $path" >&2
     return 1
   fi
-}
-
-# Prints the recorded checkout root on line 1 and its recorded hosts,
-# space-separated, on line 2. Fails with a readable message when the pointer is
-# missing, malformed, or records a checkout that is no longer usable. It never
-# falls back to the current checkout and never rewrites the pointer.
-read_source_pointer() {
-  python3 - "$ROOT/scripts/write-source-pointer.py" "$HOME" <<'POINTER'
-import importlib.util
-import json
-import sys
-from pathlib import Path
-
-module_path, home = sys.argv[1], sys.argv[2]
-spec = importlib.util.spec_from_file_location("teamwork_source_pointer", module_path)
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
-
-path = module.pointer_path(Path(home))
-if path.is_symlink():
-    sys.exit(f"Teamwork source pointer is a symlink, not a regular file: {path}")
-if not path.exists():
-    sys.exit(
-        f"Teamwork source pointer is missing: {path}. "
-        "Run ./install.sh <host> from the Teamwork checkout you want to install from."
-    )
-try:
-    value = json.loads(path.read_text(encoding="utf-8"))
-except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-    sys.exit(f"Teamwork source pointer is not readable JSON at {path}: {exc}")
-try:
-    module.validate_pointer_object(value)
-except module.PointerError as exc:
-    sys.exit(f"Teamwork source pointer is malformed at {path}: {exc}")
-root = Path(value["root"])
-if not module.checkout_is_valid(root):
-    sys.exit(
-        f"Teamwork source pointer at {path} records {root}, which is not a usable "
-        "Teamwork checkout (VERSION, skills/, and install.sh must all be present)."
-    )
-print(root)
-print(" ".join(value["hosts"]))
-POINTER
-}
-
-write_source_pointer() {
-  local path
-  path="$(
-    python3 "$ROOT/scripts/write-source-pointer.py" write \
-      --root "$ROOT" \
-      --version "$PKG_VERSION" \
-      --home "$HOME" \
-      "$@"
-  )"
-  echo "Recorded Teamwork source pointer: $path"
 }
 
 teamwork_skill_entry_is_named() {
@@ -643,7 +497,7 @@ install_codex_skill_set() {
     preflight_legacy_codex_skills "$legacy_root"
     preflight_owned_legacy_cleanup "$legacy_root"
   fi
-  install_skill_set "$dest_root" "Codex" "$CODEX_PROFILE" "codex"
+  install_skill_set "$dest_root" "Codex"
   if [[ "$legacy_root" != "$dest_root" ]]; then
     remove_owned_legacy_codex_skills "$legacy_root"
     remove_legacy_codex_router_copy "$legacy_root"

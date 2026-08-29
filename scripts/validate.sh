@@ -14,8 +14,6 @@ fi
 bash -n "$ROOT/install.sh" \
   "$ROOT/scripts/init-project.sh" "$ROOT/scripts/install/"*.sh
 
-PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/plugin-runtime-root.py" >/dev/null
-PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/write-source-pointer.py" check
 
 # The suite is behavior-only: every case runs the real installer or the real
 # project-init script against a throwaway HOME and reads the filesystem back.

@@ -5,8 +5,7 @@
 ./install.sh cursor-policy
 ```
 
-`cursor` installs the Skill and the three role templates under
-`~/.cursor/skills/`. Invoke the Skill with `/teamwork-collaborate`; Codex
+`cursor` installs the Skill under `~/.cursor/skills/`. Invoke the Skill with `/teamwork-collaborate`; Codex
 uses `$teamwork-collaborate` instead. Policy activation is a separate step
 because Cursor keeps User Rules in its own settings store, not a file the
 installer owns: `./install.sh cursor-policy` prints the standing policy
@@ -35,7 +34,7 @@ not add a second implementation of any of them:
 
 - **CreatePlan** and host Plan drafts are editable candidates; user
   confirmation or Build is acceptance of a reusable plan, then the Skill's
-  persistence contract applies. CreatePlan is not Writer.
+  persistence contract applies.
 - **Debug** intermediate hypotheses do not persist; a confirmed cause,
   verified fix, or durable blocker does, through the Skill's own
   persistence contract when that work was reached through
@@ -53,27 +52,10 @@ not add a second implementation of any of them:
   there. If the User Rule above is absent, the project `AGENTS.md` block is
   still the minimum shared bridge.
 
-## Parallel execution surface
+## Model tiers
 
-`cursor-agent --help` exposes no fan-out subcommand. An independent line is
-carried by dispatching the installed role agents under `~/.cursor/agents`,
-one per line, so Worker is the primary vehicle here rather than a fallback.
-`-w, --worktree [name]` starts a line in an isolated git worktree under
-`~/.cursor/worktrees/`, which is how two lines writing the same repository
-stay off each other. The `worker` subcommand starts a private cloud worker
-that spends the user's own environment and account, so it is proposed with
-its cost, never started on the agent's own judgement.
-
-## Roles and models
-
-Cursor roles pin `model` by job; `--profile` does not apply to Cursor and
-the Cursor install does not rewrite these pins. Challenger and Worker pin
-Grok 4.6 Fast at high effort; Writer pins Grok 4.6 Fast at medium effort.
-
-Cursor's own choice here is coarser than a per-dispatch one: each role
-pins one fixed model, and a dispatch does not vary it per line. The
-global policy's delegation rules still name the underlying cost/speed/
-quality trade-off for balancing lines; on this host that surfaces as how
-many Worker lines to run rather than varying any single line's tier. This
-file does not pin that trade-off to a specific model name or generation,
-since Cursor's own roster changes independently of this contract.
+Teamwork installs no agents. A dispatch carries its model and reasoning
+effort in one value as `<model>[effort=...]`. Which tier a line gets is the
+global policy's delegation rules — weigh cost, speed, and quality by what
+that line actually needs. This file does not pin that to a model name or
+generation, since Cursor's own roster changes independently of this contract.

@@ -6,8 +6,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$ROOT/scripts/install/common.sh"
 # shellcheck source=scripts/install/policy.sh
 source "$ROOT/scripts/install/policy.sh"
-# shellcheck source=scripts/install/profiles.sh
-source "$ROOT/scripts/install/profiles.sh"
 # shellcheck source=scripts/install/targets.sh
 source "$ROOT/scripts/install/targets.sh"
 
@@ -39,22 +37,6 @@ while [[ $# -gt 0 ]]; do
       }
       shift 2
       ;;
-    --profile)
-      [[ $# -ge 2 ]] || { echo "--profile requires a value." >&2; usage; exit 2; }
-      CODEX_PROFILE="$2"
-      CODEX_PROFILE_SOURCE="cli"
-      shift 2
-      ;;
-    --performance-first)
-      CODEX_PROFILE="performance-first"
-      CODEX_PROFILE_SOURCE="cli"
-      shift
-      ;;
-    --cost-first)
-      CODEX_PROFILE="cost-first"
-      CODEX_PROFILE_SOURCE="cli"
-      shift
-      ;;
     project|project-codex-agents)
       echo "Project-local install targets were removed. Use ./install.sh --project-root <path> init-project to set up only that project's context; refresh global Teamwork surfaces separately." >&2
       usage
@@ -73,7 +55,7 @@ while [[ $# -gt 0 ]]; do
       DOCTOR_ARGS=("$@")
       break
       ;;
-    codex|cursor|claude|all|update|init-project|codex-agents|cursor-agents|claude-agents|codex-policy|cursor-policy|cursor-policy-copy|claude-policy)
+    codex|cursor|claude|all|init-project|codex-policy|cursor-policy|cursor-policy-copy|claude-policy)
       if [[ -n "$TARGET" ]]; then
         echo "Specify only one install target." >&2
         usage
@@ -95,27 +77,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 EFFECTIVE_TARGET="${TARGET:-codex}"
-if [[ -n "$CODEX_PROFILE_SOURCE" ]] && teamwork_target_uses_codex_profile "$EFFECTIVE_TARGET"; then
-  validate_codex_profile
-fi
-
-if teamwork_target_is_cursor_only "$EFFECTIVE_TARGET" \
-  || teamwork_target_is_claude_only "$EFFECTIVE_TARGET"; then
-  if [[ "$CODEX_PROFILE_SOURCE" == "cli" ]]; then
-    echo "Profile flags are supported only with Codex targets." >&2
-    usage
-    exit 2
-  fi
-fi
 
 if [[ -n "$PROJECT_ROOT" && "$EFFECTIVE_TARGET" != "init-project" ]]; then
   echo "--project-root is valid only with init-project." >&2
   usage
   exit 2
-fi
-
-if teamwork_target_uses_codex_profile "$EFFECTIVE_TARGET"; then
-  validate_codex_profile
 fi
 
 case "$EFFECTIVE_TARGET" in
@@ -131,20 +97,8 @@ case "$EFFECTIVE_TARGET" in
   all)
     install_all
     ;;
-  update)
-    install_update
-    ;;
   init-project)
     init_project
-    ;;
-  codex-agents)
-    install_codex_agents_home
-    ;;
-  cursor-agents)
-    install_cursor_agents_home
-    ;;
-  claude-agents)
-    install_claude_agents_home
     ;;
   codex-policy)
     write_teamwork_codex_global_policy

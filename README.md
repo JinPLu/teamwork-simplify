@@ -9,9 +9,10 @@
 ---
 
 Teamwork 是一层极薄的补充：Codex / Cursor / Claude Code 已经能做的事（原生
-Plan、原生问答、原生 Debug、原生代码复查）它不重复；只补两样宿主本身没有的
-东西——一份跨项目都成立的常驻工作规则，和一个把"先讨论方向、再定计划、
-再拆分执行"这件事做完整的方法。
+Plan、原生问答、原生 Debug、原生代码复查、原生的 subagent 与扇出）它一概
+不重复，只补三样宿主本身没有的东西——一份跨项目都成立的常驻工作规则、一份
+跟着仓库走的项目上下文，和一个把"先讨论方向、再收敛到可执行计划"这件事
+做完整的方法。**方法只到计划为止，怎么执行交还给宿主自己。**
 
 ## 解决什么问题
 
@@ -19,8 +20,10 @@ Plan、原生问答、原生 Debug、原生代码复查）它不重复；只补�
 当方向还没定、需要几个人（或几条并行线）一起把一个模糊目标收敛成一份
 可执行计划时，原生的 Plan 模式通常只管"写计划"，不管"先讨论选项、
 确认方向、再拆出可以并行的工作、派给独立的执行面、最后把结果整合验证"
-这一整条链路。Teamwork 只装这一条方法，加三个可选角色去执行拆分出来的
-工作，再加一套按 kind 分类的文档记住这条链路上真正需要跨会话复用的东西。
+这一整条链路的前半段。Teamwork 只装这一条方法，再加一套按 kind 分类的文档
+记住链路上真正需要跨会话复用的东西。计划之后的执行——拆几条线、走宿主的
+哪个面、各线用什么档位的模型——由宿主自己的 subagent 与扇出面去做，
+Teamwork 不另造一套。
 
 ## 三层：规则住在哪里，由谁读到它决定
 
@@ -64,56 +67,40 @@ cd teamwork-simplify
 ./install.sh claude   # 或 codex / cursor-policy
 ```
 
-- `./install.sh codex` 把 Skill、三个角色模板和常驻政策安装进 Codex
-  （政策写入 `~/.codex/AGENTS.md`）。
+- `./install.sh codex` 把 Skill 和常驻政策安装进 Codex（政策写入
+  `~/.codex/AGENTS.md`）。
 - `./install.sh claude` 把同样的内容安装进 Claude Code（政策写入
   `~/.claude/CLAUDE.md`）。
-- `./install.sh cursor` 安装 Skill 与角色；`./install.sh cursor-policy`
+- `./install.sh cursor` 安装 Skill；`./install.sh cursor-policy`
   单独打印（并尝试复制）常驻政策文本，因为 Cursor 的 User Rules 是它自己
   设置里的一份文本，不是安装器能直接写的文件——这一步需要手动粘贴到
   Settings -> Rules -> User Rules。
 
-每个安装 target（`codex` / `cursor` / `claude` / `all`，以及 `init-project`）
-都会把这次运行所在的 checkout 写进 `~/.teamwork/install.json`：覆盖
-`root`（当前 checkout 的绝对路径）与 `version`，并把这次装的宿主并入已
-记录的 `hosts` 列表（`init-project` 不带宿主，不会新增或删除任何宿主
-记录，只刷新 `root`/`version`）。只有 `./install.sh update` 会**读**这份
-指针：它按指针记录的 `root` 依次对指针记录的**每一个**宿主重新执行
-`./install.sh <host>`，和你运行 `update` 时人在哪个目录无关；指针缺失、
-不是合法 JSON、记录的 `hosts` 为空、或记录的 checkout 已不可用（缺
-`VERSION`、`skills/`、`install.sh` 三者之一）时，`update` 直接失败退出，
-不会退回当前目录、也不会改写指针。`init-project` 只写指针，不读它。
+要刷新一次已有安装，回到那个 checkout 再跑一遍 `./install.sh <host>` 即可；
+没有指针文件，也没有 `update` 子命令。
+
+Teamwork **不安装任何 agent，也不安装任何 hook**。早期版本装过的三个角色
+（Challenger / Worker / Writer）会在下次安装时被移除，且只移除本产品确实
+写过的那个文件——判据是文件内容而不是文件名，所以同名的用户自有 agent 会被
+原样保留并出声提示。
 
 ## 一个 Skill 能做什么
 
-Teamwork 只有一个公开 Skill：`teamwork-collaborate`。它把一次需要共同判断
-方向的工作，从讨论一路带到可验证的结果：
+Teamwork 只有一个公开 Skill：`teamwork-collaborate`。它把一次方向还没定的
+工作，从讨论带到一份可执行、带依赖结构的计划为止——**执行走宿主自己的面，
+Teamwork 只把启动它的那一句写清楚**：
 
 1. **讨论**：列出真正有意义的选项和权衡，不为了流程而提问。
 2. **方向**：收敛到一个你愿意采用、且已经确认的方向。
 3. **可执行计划**：把方向拆成有依赖顺序、可验证、有停止条件的步骤。
-4. **拆并行线**：把彼此独立的步骤分成可以同时推进的线，交给宿主自己的
-   并行执行面去跑；宿主没有这样的原生面时，才落到可选的 Worker 角色兜底。
-5. **整合验证**：收回结果，检查真实证据，决定进入主线还是回到讨论。
+4. **交出工作结构和启动那一行**：记录哪些步骤依赖哪些、哪些写同一批路径、
+   每步什么算做完——这是这条线程知道而宿主推导不出来的东西；再写下启动它
+   的那一句：走宿主的哪个面、哪些并行、按速度费用效果平衡好可调用的模型。
+   那是启动指令，不是排班表——拆几条线、每条什么档位，等真跑起来看着定。
 
 在 Codex 里用 `$teamwork-collaborate` 点名它；在 Cursor / Claude Code 里用
 `/teamwork-collaborate`。目标和边界已经清楚的改动不需要它，直接说结果
 即可。
-
-## 三个可选角色
-
-Skill 拆出的工作由三个边界化角色去做，都是可选的，缺席不会卡住主线：
-
-| 角色 | 做什么 |
-| --- | --- |
-| Challenger | 对已成形的方向或计划找真实反例和被忽略的代价，不负责生成新方案。 |
-| Worker | 在给定的写入范围内完成一条并行线的具体工作，返回结果与证据；宿主有自己的并行执行面时优先用那个，Worker 是没有原生面时的兜底。 |
-| Writer | 把方法 owner 已经确认的结果写成 `docs/teamwork/<kind>/` 下的 Markdown，不改变事实或结论；写不了就返回 `no-write` 和确切缺口，由 Root 报告未交付的路径。 |
-
-Root 只在并行调查、独立判断或分工确实有用时才派发；handoff 只带五个
-字段：**目标（objective）、负责范围（owned scope）、已确定约束
-（settled constraints）、已有证据（available evidence）、期望返回
-（requested return）**。
 
 ## 可读文档
 
@@ -125,7 +112,7 @@ Root 只在并行调查、独立判断或分工确实有用时才派发；handof
 次对话就没法复原的东西，Root 就在同一响应周期把纯 Markdown 写入
 `docs/teamwork/<kind>/`，并顺手刷新索引里对应的一行；进入宿主界面本身
 不会落盘，也不必先点名 Skill；哪些结论不值得落盘，同一节另有定义。
-Writer 只在不耽误写入时帮忙。每份文档同时保留一份**当前综合**和按时
+每份文档同时保留一份**当前综合**和按时
 间追加的**历史**，既方便快速阅读，也不会抹掉结论如何变化。
 
 kind 是闭集，不会新造额外 kind，也不会在 `docs/teamwork/` 根目录直接落盘；

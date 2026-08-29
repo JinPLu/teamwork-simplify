@@ -18,8 +18,7 @@ from harness import (  # noqa: E402
     CODEX_POLICY_START,
     CURSOR_POLICY_END,
     CURSOR_POLICY_START,
-    POINTER_RELATIVE,
-    ROOT,
+        ROOT,
     TeamworkCase,
     contract_document,
     digest,
@@ -131,15 +130,14 @@ class IdempotenceTests(TeamworkCase):
     def test_repeated_installs_are_byte_identical_from_the_second_run(self) -> None:
         self.install_ok("all")
         self.install_ok("all")
-        second = snapshot(self.home, skip=(POINTER_RELATIVE,))
+        second = snapshot(self.home)
         self.install_ok("all")
-        third = snapshot(self.home, skip=(POINTER_RELATIVE,))
+        third = snapshot(self.home)
         self.install_ok("all")
-        fourth = snapshot(self.home, skip=(POINTER_RELATIVE,))
+        fourth = snapshot(self.home)
 
         self.assertEqual(second, third)
         self.assertEqual(third, fourth)
-        self.assertTrue((self.home / POINTER_RELATIVE).is_file())
 
 
 class ManagedBlockIsolationTests(TeamworkCase):
@@ -193,94 +191,71 @@ class ManagedBlockIsolationTests(TeamworkCase):
         self.assertEqual(first, (claude.read_bytes(), codex.read_bytes()))
 
 
-class UpdateTests(TeamworkCase):
-    def stamp(self, host_root: str) -> str:
-        return (self.home / host_root / ".teamwork-version").read_text(encoding="utf-8").strip()
+class AgentRetirementTests(TeamworkCase):
+    """Teamwork installs no agents; every one an earlier release left is removed.
 
-    def test_update_refreshes_every_recorded_host_from_the_recorded_checkout(self) -> None:
-        recorded = self.checkout_copy("recorded", "9.9.9-recorded")
-        other = self.checkout_copy("other", "0.0.1-other")
+    The removal must key on what the file says, not on what it is called. A
+    user may keep an agent whose name collides exactly with a retired Teamwork
+    one, and that file has to survive: this is the same class of mistake as the
+    skill-root cleanup that once deleted an unrelated Skill by name.
+    """
 
-        self.install_ok("claude", checkout=recorded)
-        self.install_ok("codex", checkout=recorded)
+    ROLES = ("challenger", "worker", "writer")
 
-        pointer = self.home / POINTER_RELATIVE
-        self.assertEqual(
-            sorted(json.loads(pointer.read_text(encoding="utf-8"))["hosts"]),
-            ["claude", "codex"],
+    def previous_release_agents(self) -> tuple[Path, Path, Path]:
+        """The three markdown role files as the last release wrote them."""
+        claude = self.home / ".claude" / "agents"
+        cursor = self.home / ".cursor" / "agents"
+        codex = self.home / ".codex" / "agents"
+        for role in self.ROLES:
+            self.write_agent(claude, role, f"You are the Teamwork {role.title()}.")
+            self.write_agent(cursor, role, f"You are the Teamwork {role.title()}.")
+            self.write(
+                codex / f"teamwork-{role}.toml",
+                f'name = "teamwork_{role}"\nmodel = "x"\n\nYou are the Teamwork {role.title()}.\n',
+            )
+        return claude, cursor, codex
+
+    def test_agents_a_previous_release_installed_are_removed(self) -> None:
+        claude, cursor, codex = self.previous_release_agents()
+
+        self.install_ok("all")
+
+        for role in self.ROLES:
+            self.assertFalse((claude / f"{role}.md").exists(), role)
+            self.assertFalse((cursor / f"{role}.md").exists(), role)
+            self.assertFalse((codex / f"teamwork-{role}.toml").exists(), role)
+
+    def test_an_agent_this_product_never_wrote_survives_a_name_collision(self) -> None:
+        claude, _cursor, codex = self.previous_release_agents()
+        mine = self.write(
+            claude / "worker.md",
+            "---\nname: worker\n---\nYou are my own worker. Nothing to do with Teamwork.\n",
         )
+        near = self.write(codex / "deepseek-worker.toml.disabled", "name = \"deepseek\"\n")
+        before = {mine: mine.read_text(encoding="utf-8"), near: near.read_text(encoding="utf-8")}
 
-        # Overwrite both installed roots so a no-op update cannot pass.
-        for root in (".claude/skills", ".agents/skills"):
-            (self.home / root / ".teamwork-version").write_text("stale\n", encoding="utf-8")
+        done = self.install_ok("all")
 
-        done = self.install_ok("update", checkout=other)
+        for path, text in before.items():
+            self.assertTrue(path.is_file(), path)
+            self.assertEqual(path.read_text(encoding="utf-8"), text, path)
+        self.assertIn(str(mine), done.stderr)
 
-        self.assertEqual(self.stamp(".claude/skills"), "9.9.9-recorded", done.stdout)
-        self.assertEqual(self.stamp(".agents/skills"), "9.9.9-recorded", done.stdout)
-        self.assertEqual(
-            json.loads(pointer.read_text(encoding="utf-8"))["root"], str(recorded)
-        )
+    def test_install_creates_no_agent_directory_of_its_own(self) -> None:
+        self.install_ok("all")
 
-    def test_update_fails_without_touching_anything_when_the_pointer_is_unusable(self) -> None:
-        recorded = self.checkout_copy("recorded", "9.9.9-recorded")
-        other = self.checkout_copy("other", "0.0.1-other")
-        self.install_ok("claude", checkout=recorded)
-        pointer = self.home / POINTER_RELATIVE
-        healthy = pointer.read_text(encoding="utf-8")
-
-        broken = {
-            "not-json": "{ this is not json",
-            "missing-root": json.dumps(
-                {
-                    "root": str(self.workdir / "gone"),
-                    "version": "1.0.0",
-                    "hosts": ["claude"],
-                    "installed_at": "2026-08-29T00:00:00Z",
-                }
-            ),
-            "not-a-checkout": json.dumps(
-                {
-                    "root": str(self.workdir),
-                    "version": "1.0.0",
-                    "hosts": ["claude"],
-                    "installed_at": "2026-08-29T00:00:00Z",
-                }
-            ),
-            "no-hosts": json.dumps(
-                {
-                    "root": str(recorded),
-                    "version": "1.0.0",
-                    "hosts": [],
-                    "installed_at": "2026-08-29T00:00:00Z",
-                }
-            ),
-        }
-
-        for label, content in broken.items():
-            with self.subTest(pointer=label):
-                pointer.write_text(content, encoding="utf-8")
-                before = snapshot(self.home)
-                done = self.install("update", checkout=other)
-                self.assertNotEqual(done.returncode, 0, done.stdout)
-                self.assertEqual(before, snapshot(self.home))
-
-        pointer.write_text(healthy, encoding="utf-8")
-        self.install_ok("update", checkout=other)
-
-    def test_update_fails_when_no_pointer_was_ever_written(self) -> None:
-        done = self.install("update")
-        self.assertNotEqual(done.returncode, 0, done.stdout)
-        self.assertEqual(snapshot(self.home), {})
+        for relative in (".claude/agents", ".cursor/agents", ".codex/agents"):
+            self.assertNotIn(relative, snapshot(self.home))
 
 
 class CrossHostParityTests(TeamworkCase):
-    """The same Skill and the same role contracts must land on every host.
+    """The same Skill and the same shared policy body must land on every host.
 
-    Each host has its own skill root, its own agent format, and its own policy
-    wrapper. What must not vary is the method itself: one host quietly shipping
-    a different SKILL.md or a differently-worded role contract is a silent
-    fork of the product, and nothing else in this suite would notice.
+    Each host has its own skill root and its own policy wrapper. What must not
+    vary is the method and the standing rules: one host quietly shipping a
+    different SKILL.md or a different policy body is a silent fork of the
+    product, and nothing else in this suite would notice.
     """
 
     SKILL_ROOTS = {
@@ -288,8 +263,6 @@ class CrossHostParityTests(TeamworkCase):
         "codex": ".agents/skills",
         "cursor": ".cursor/skills",
     }
-    MARKDOWN_AGENT_ROOTS = {"claude": ".claude/agents", "cursor": ".cursor/agents"}
-    ROLES = ("challenger", "worker", "writer")
 
     def install_every_host(self) -> None:
         self.install_ok("codex")
@@ -308,22 +281,6 @@ class CrossHostParityTests(TeamworkCase):
         reference = trees["claude"]
         for host, tree in trees.items():
             self.assertEqual(tree, reference, f"{host} skill tree differs from claude")
-
-    def test_markdown_hosts_share_one_body_per_role(self) -> None:
-        self.install_every_host()
-
-        for role in self.ROLES:
-            bodies = {}
-            for host, relative in self.MARKDOWN_AGENT_ROOTS.items():
-                path = self.home / relative / f"{role}.md"
-                self.assertTrue(path.is_file(), f"{host} installed no {role}")
-                _, _, body = path.read_text(encoding="utf-8").split("---\n", 2)
-                bodies[host] = body
-            self.assertEqual(
-                bodies["cursor"],
-                bodies["claude"],
-                f"{role} carries a different contract on cursor than on claude",
-            )
 
     def test_each_host_policy_block_carries_the_same_shared_body(self) -> None:
         self.install_every_host()
@@ -523,9 +480,15 @@ class CommandLineTests(TeamworkCase):
 
         self.rejected("bogus-target")
         self.rejected("codex", "claude")
-        self.rejected("--profile", "bogus", "codex")
-        self.rejected("--profile")
-        self.rejected("--profile", "cost-first", "claude")
+        # Flags and targets this release removed. They must not silently become
+        # "unknown argument that happens to still work".
+        self.rejected("--profile", "cost-first", "codex")
+        self.rejected("--performance-first", "codex")
+        self.rejected("--cost-first", "codex")
+        self.rejected("update")
+        self.rejected("codex-agents")
+        self.rejected("cursor-agents")
+        self.rejected("claude-agents")
         self.rejected("--project-root", str(missing), "init-project")
         self.rejected("--project-root", str(a_file), "init-project")
         self.rejected("--project-root")

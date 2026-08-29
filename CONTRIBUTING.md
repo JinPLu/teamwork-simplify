@@ -4,7 +4,6 @@ Keep changes small and behavior-led.
 
 - Edit `skills/teamwork-collaborate/SKILL.md` first; it is the sole owner of
   the method.
-- Update optional role behavior in `templates/*-agents/`.
 - Keep cross-project working rules in `policy/teamwork-global.md` only.
 - Preserve unknown user files in installer changes.
 

@@ -9,7 +9,7 @@ lets this file pull in the repository's own working conventions.
 ./install.sh claude
 ```
 
-This installs the Skill and the three role templates, and writes the
+This installs the Skill and writes the
 standing policy into `~/.claude/CLAUDE.md` under the
 `TEAMWORK_CLAUDE_GLOBAL_START` / `_END` marker. Invoke the Skill with
 `/teamwork-collaborate`; Codex uses `$teamwork-collaborate` instead.
@@ -43,40 +43,14 @@ reuses
 project-specific detail on top. Root writes it in the same response
 cycle.
 
-## Parallel execution surface
+## Model tiers
 
-When the split verdict says two or more lines are independent, Claude Code
-offers two surfaces, in this order:
-
-- **Concurrent `Task`/`Agent` dispatch** — several agent calls sent in one
-  message run at the same time. Always available, no opt-in. Pass
-  `isolation: "worktree"` when two lines write to the same repository, so
-  their edits cannot collide.
-- **The `Workflow` tool** — the host's own fan-out harness, which a user
-  typically asks for as a dynamic workflow. It runs only on the user's
-  explicit opt-in (their own words, the `ultracode` keyword, or a Skill that
-  calls it) and can spawn many agents, so Root proposes it and names the
-  cost; Root never enables it on its own judgement.
-
-Worker is the fallback for a host with neither, not the first choice here.
-
-## Roles and models
-
-`Task`/`Agent` dispatches the three optional roles: Challenger, Worker, and
-Writer. Writer is a dispatch role, not a Skill. Claude agents pin models by
-job and ignore `--profile` (that flag applies to Codex agents only):
-Challenger runs Opus at xhigh effort, Worker runs Sonnet at high effort,
-and Writer runs Sonnet at medium effort. A per-dispatch model overrides the
-pin; an unpinned role inherits the session model and effort.
-
-Beyond these three named roles, Root also dispatches ad hoc parallel lines
-with plain `Task`/`Agent` calls (see Parallel execution surface above). For
-those, Root picks each line's model and reasoning effort by what that line
-needs, weighing cost, speed, and quality together, rather than lifting
-every line to the same tier. The global policy's delegation rules own this
-balancing principle; this file does not pin it to a specific model name or
-generation, since Claude Code's own model roster changes independently of
-this contract.
+Teamwork installs no agents. A dispatch names its own `model` and `effort`
+and inherits the session's when it names neither. Which tier a line gets is
+the global policy's delegation rules — weigh cost, speed, and quality by what
+that line actually needs. This file does not pin that to a model name or
+generation, since Claude Code's own roster changes independently of this
+contract.
 
 A Cursor install that refreshes this Claude skill root still installs the
 full Claude set. When both `~/.cursor/skills/` and `~/.claude/skills/` hold

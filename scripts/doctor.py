@@ -711,18 +711,7 @@ def repo_version() -> str:
     return read_text(REPO_ROOT / "VERSION").strip() or "unknown"
 
 
-def source_pointer() -> dict:
-    path = Path.home() / ".teamwork" / "install.json"
-    if not path.is_file():
-        return {}
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return {}
-    return value if isinstance(value, dict) else {}
-
-
-def check_global(version: str, pointer: dict) -> list[dict]:
+def check_global(version: str) -> list[dict]:
     findings: list[dict] = []
 
     for root in SKILL_ROOTS:
@@ -778,16 +767,6 @@ def check_global(version: str, pointer: dict) -> list[dict]:
             "Settings -> Rules -> User Rules",
         )
     )
-
-    recorded = pointer.get("version")
-    if recorded and recorded != version:
-        findings.append(
-            finding(
-                "warn",
-                "pointer-version",
-                f"~/.teamwork/install.json records {recorded} while this checkout is at {version}",
-            )
-        )
 
     return findings
 
@@ -874,13 +853,11 @@ def build_report(project_filter: Path | None) -> dict:
     current_skills, retired_skills = installer_skill_names()
     has_agents_import = load_project_init_module().has_agents_import
     version = repo_version()
-    pointer = source_pointer()
 
     if project_filter is not None:
         projects = [project_filter.resolve()] if is_project(project_filter) else []
     else:
-        extra_roots = [Path(pointer["root"])] if pointer.get("root") else []
-        projects = discover_projects(Path.home() / "Documents", extra_roots)
+        projects = discover_projects(Path.home() / "Documents", [REPO_ROOT])
 
     project_reports = []
     for project in projects:
@@ -897,7 +874,7 @@ def build_report(project_filter: Path | None) -> dict:
         project_reports.append({"path": str(project), "findings": findings})
     project_reports.sort(key=lambda item: (worst(item["findings"]), item["path"]))
 
-    global_findings = sort_findings(check_global(version, pointer))
+    global_findings = sort_findings(check_global(version))
 
     every = global_findings + [
         item for project in project_reports for item in project["findings"]
