@@ -10,7 +10,7 @@ context 一节。下面两节只是这条契约应用到本项目之后的结果
 
 ## 项目当前状态
 
-- **正在做**：[接通读取侧，并让 status 承担索引收敛](plans/teamwork-reading-side-and-index-convergence.md)。
+- **刚完成**：[接通读取侧，并让 status 承担索引收敛](plans/teamwork-reading-side-and-index-convergence.md)。
   起因是梳理发现三样核心功能里只有「讨论+计划」成熟：项目上下文维护的写入侧有效
   而**读取侧接近零落地**——本机 20 个装过 Teamwork 的项目全部没有
   `docs/teamwork/README.md`，托管块停在旧措辞，而 doctor 对它们报 0 error。
