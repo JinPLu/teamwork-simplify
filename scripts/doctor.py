@@ -34,6 +34,13 @@ MANAGED_END = "<!-- TEAMWORK_PROJECT_END -->"
 DOCS_RELATIVE = ("docs", "teamwork")
 INDEX_NAME = "README.md"
 
+# The index rides into every session through the project's own
+# `@docs/teamwork/README.md` import, so its length is a standing per-session
+# cost, not a cost paid when someone reads it: at roughly 15 words a line, 80
+# lines is already about 1.2k tokens resident before any work starts. Past that
+# the index is worth pruning by retiring documents, not worth carrying.
+INDEX_ENTRY_BUDGET = 80
+
 SEVERITY_ORDER = {"error": 0, "warn": 1, "info": 2}
 
 PRUNED_DIRECTORY_NAMES = {
@@ -53,6 +60,7 @@ MAX_SCAN_DEPTH = 5
 KIND_TABLE_ROW = re.compile(r"^\|.*\|\s*`([a-z][a-z0-9_-]*)/`\s*\|\s*$")
 
 MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+PROJECT_LABEL = re.compile(r"^-\s+Project label:\s*`([^`]+)`", re.MULTILINE)
 BACKTICKED = re.compile(r"`([^`\n]+)`")
 KEBAB_IDENTIFIER = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$")
 
@@ -121,11 +129,12 @@ def load_project_init_module():
         raise DoctorError(f"cannot load {INIT_PROJECT_FILES}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    if not hasattr(module, "has_agents_import"):
-        raise DoctorError(
-            f"{INIT_PROJECT_FILES} no longer exposes has_agents_import(); host reachability "
-            "is decided by that function and is not reimplemented here"
-        )
+    for name in ("has_import", "managed_block", "AGENTS_IMPORT", "README_IMPORT"):
+        if not hasattr(module, name):
+            raise DoctorError(
+                f"{INIT_PROJECT_FILES} no longer exposes {name}; host reachability and the "
+                "managed block's own text are decided there and are not reimplemented here"
+            )
     return module
 
 
@@ -209,16 +218,24 @@ def spelling_variant(kind: str, closed: set[str]) -> str | None:
     return None
 
 
-def documents_on_disk(docs_root: Path, closed: set[str]) -> list[str]:
-    """Every document under a contract kind directory, relative to docs/teamwork."""
-    documents: list[str] = []
+def documents_on_disk(docs_root: Path, closed: set[str], contract: dict) -> dict[str, str]:
+    """Every document under a contract kind directory -> its lifecycle status.
+
+    The status is what the index rules turn on, so it is read here once, from the
+    document's own frontmatter; an unreadable or absent field reads as the empty
+    string and the shape checks are what report that.
+    """
+    documents: dict[str, str] = {}
+    field = contract["lifecycle_field"]
     for kind in sorted(closed):
         directory = docs_root / kind
         if not directory.is_dir():
             continue
         for path in sorted(directory.rglob("*.md")):
-            if path.is_file():
-                documents.append(str(path.relative_to(docs_root)))
+            if not path.is_file():
+                continue
+            _keys, values = frontmatter(read_text(path).splitlines())
+            documents[str(path.relative_to(docs_root))] = values.get(field, "")
     return documents
 
 
@@ -249,7 +266,7 @@ def index_references(text: str, closed: set[str]) -> list[str]:
     return references
 
 
-def check_persistence(project: Path, closed: set[str]) -> list[dict]:
+def check_persistence(project: Path, closed: set[str], contract: dict) -> list[dict]:
     findings: list[dict] = []
     docs_root = project.joinpath(*DOCS_RELATIVE)
     if not docs_root.is_dir():
@@ -296,16 +313,23 @@ def check_persistence(project: Path, closed: set[str]) -> list[dict]:
 
     index_path = docs_root / INDEX_NAME
     if not index_path.is_file():
-        # The contract never requires a docs/teamwork/README.md: it is a
-        # navigation convenience the installer's init-project seeds, not a
-        # persistence rule. A project that never ran init (or dropped the
-        # file) has no human-readable index, and that is not drift.
+        findings.append(
+            finding(
+                "error",
+                "index-missing",
+                f"docs/teamwork/ exists but has no {INDEX_NAME}; the contract's reading "
+                "side has no entry point, so nothing points a session at what this project "
+                "already decided — run ./install.sh --project-root "
+                f"{project} init-project",
+            )
+        )
         return findings
 
-    documents = documents_on_disk(docs_root, closed)
+    active = contract["indexed_status"]
+    documents = documents_on_disk(docs_root, closed, contract)
     referenced = index_references(read_text(index_path), closed)
     for reference in referenced:
-        if not (docs_root / reference).is_file():
+        if reference not in documents:
             findings.append(
                 finding(
                     "error",
@@ -313,12 +337,23 @@ def check_persistence(project: Path, closed: set[str]) -> list[dict]:
                     f"docs/teamwork/{INDEX_NAME} indexes {reference}, which is not on disk",
                 )
             )
-    for document in documents:
-        if document not in referenced:
-            # A document nobody indexed is drift the next write can absorb, so it
-            # stays a warning: the session-start hook prints errors only, and a
-            # project carrying pre-contract documents must not shout on every
-            # start. A dead index entry stays an error — it points at nothing.
+        elif documents[reference] != active:
+            findings.append(
+                finding(
+                    "warn",
+                    "index-lists-inactive",
+                    f"docs/teamwork/{INDEX_NAME} indexes {reference}, whose "
+                    f"{contract['lifecycle_field']} is "
+                    f"{documents[reference] or 'unreadable'} rather than {active}; a "
+                    "superseded file stays on disk but leaves the index",
+                )
+            )
+    for document, status in documents.items():
+        if status == active and document not in referenced:
+            # A document nobody indexed is drift the next write can absorb: the
+            # write side refreshes the index line in the same turn, so this
+            # names a missed refresh rather than a broken tree. A dead index
+            # entry stays an error — it points at nothing.
             findings.append(
                 finding(
                     "warn",
@@ -327,6 +362,16 @@ def check_persistence(project: Path, closed: set[str]) -> list[dict]:
                     f"{INDEX_NAME} points at it",
                 )
             )
+    if len(referenced) > INDEX_ENTRY_BUDGET:
+        findings.append(
+            finding(
+                "warn",
+                "index-oversized",
+                f"docs/teamwork/{INDEX_NAME} indexes {len(referenced)} documents, past the "
+                f"{INDEX_ENTRY_BUDGET} this check budgets; retire what is no longer "
+                f"{active}",
+            )
+        )
     return findings
 
 
@@ -336,7 +381,7 @@ def check_project(
     contract: dict,
     current_skills: set[str],
     retired_skills: set[str],
-    has_agents_import,
+    project_init,
 ) -> list[dict]:
     findings: list[dict] = []
     agents_path = project / "AGENTS.md"
@@ -358,8 +403,29 @@ def check_project(
             )
         )
 
-    findings.extend(check_persistence(project, closed))
+    findings.extend(check_persistence(project, closed, contract))
     findings.extend(check_shape(project, closed, contract))
+
+    block_body = managed_block_text(agents_text if block_in_agents else claude_text)
+    if block_in_agents or block_in_claude:
+        # Regenerate from the label the block itself carries, not from the
+        # directory name: a project that named itself something else is not
+        # stale for that. The installer's own generator is the criterion, so a
+        # block written by an older release differs from it word for word.
+        named = PROJECT_LABEL.search(block_body)
+        current = (
+            managed_block_text(project_init.managed_block(named.group(1))) if named else ""
+        )
+        if block_body != current:
+            findings.append(
+                finding(
+                    "error",
+                    "block-stale",
+                    "the TEAMWORK_PROJECT block is not the text this version writes, so the "
+                    "project is instructed by a superseded contract; run ./install.sh "
+                    f"--project-root {project} init-project",
+                )
+            )
 
     if block_in_agents:
         if claude_path.is_symlink():
@@ -385,17 +451,28 @@ def check_project(
                     "never loads it",
                 )
             )
-        elif not has_agents_import(claude_text):
+        elif not project_init.has_import(claude_text, project_init.AGENTS_IMPORT):
             findings.append(
                 finding(
                     "error",
                     "host-unreachable",
-                    "CLAUDE.md exists but carries no active @AGENTS.md import, so Claude Code "
-                    "never loads the block",
+                    f"CLAUDE.md exists but carries no active {project_init.AGENTS_IMPORT} "
+                    "import, so Claude Code never loads the block",
                 )
             )
 
-    block_body = managed_block_text(agents_text if block_in_agents else claude_text)
+    if claude_path.is_file() and not claude_path.is_symlink():
+        if not project_init.has_import(claude_text, project_init.README_IMPORT):
+            findings.append(
+                finding(
+                    "error",
+                    "host-unreachable",
+                    f"CLAUDE.md carries no active {project_init.README_IMPORT} import, so the "
+                    "reading-side entry point never enters the session's context; run "
+                    f"./install.sh --project-root {project} init-project",
+                )
+            )
+
     for token in BACKTICKED.findall(block_body):
         identifier = token.strip()
         if not KEBAB_IDENTIFIER.match(identifier):
@@ -430,7 +507,11 @@ SHAPE_SAMPLES = 3
 # edit moves the criteria and a doctor edit does not.
 SHAPE_INDENT = " " * 4
 SHAPE_FENCE = re.compile(rf"^{SHAPE_INDENT}---\s*$")
-SHAPE_KEY = re.compile(rf"^{SHAPE_INDENT}([a-z][a-z0-9_-]*):")
+SHAPE_KEY = re.compile(rf"^{SHAPE_INDENT}([a-z][a-z0-9_-]*):(.*)$")
+# A sample value written as `active | superseded` is the contract enumerating
+# what that field may hold; a placeholder like `<YYYY-MM-DD>` or an empty value
+# enumerates nothing.
+SHAPE_ALTERNATIVE = re.compile(r"^[a-z][a-z0-9-]*$")
 SHAPE_HISTORY = re.compile(rf"^{SHAPE_INDENT}(#{{1,6}})\s+(History)\s*$")
 SHAPE_ENTRY = re.compile(rf"^{SHAPE_INDENT}(#{{1,6}})\s+<date\b")
 
@@ -464,6 +545,7 @@ def document_shape_contract() -> dict:
     lines = text.splitlines()
 
     fields: list[str] = []
+    enumerated: dict[str, list[str]] = {}
     open_fence = False
     for line in lines:
         if SHAPE_FENCE.match(line):
@@ -475,11 +557,26 @@ def document_shape_contract() -> dict:
             match = SHAPE_KEY.match(line)
             if match:
                 fields.append(match.group(1))
+                alternatives = [part.strip() for part in match.group(2).split("|")]
+                if len(alternatives) > 1 and all(
+                    SHAPE_ALTERNATIVE.match(part) for part in alternatives
+                ):
+                    enumerated[match.group(1)] = alternatives
     if not fields:
         raise DoctorError(
             f"no indented frontmatter sample in {POLICY_SOURCE}; the document field set "
             "cannot be established"
         )
+    # Exactly one field enumerates its values, and that is the document's
+    # lifecycle: which of those values a document carries is what decides
+    # whether the index lists it. Reading the field out of the sample keeps
+    # both criteria on the contract instead of on a constant copied to here.
+    if len(enumerated) != 1:
+        raise DoctorError(
+            f"the frontmatter sample in {POLICY_SOURCE} enumerates {len(enumerated)} fields; "
+            "the lifecycle field and the values it may hold cannot be established"
+        )
+    lifecycle_field, lifecycle_values = next(iter(enumerated.items()))
 
     history_level = 0
     history_title = ""
@@ -499,6 +596,11 @@ def document_shape_contract() -> dict:
 
     return {
         "fields": fields,
+        "lifecycle_field": lifecycle_field,
+        "lifecycle_values": lifecycle_values,
+        # The sample leads with the state a live document is in, and that is the
+        # one the index lists.
+        "indexed_status": lifecycle_values[0],
         "history_level": history_level,
         "history_title": history_title,
         "entry_level": entry_level,
@@ -579,6 +681,16 @@ def check_document(relative: str, path: Path, contract: dict) -> list[dict]:
                 "shape-frontmatter",
                 f"frontmatter carries {', '.join(extra)}, which the contract does not "
                 f"name (its fields are {', '.join(expected)})",
+            )
+        field = contract["lifecycle_field"]
+        allowed = contract["lifecycle_values"]
+        held = values.get(field, "")
+        if field in keys and held not in allowed:
+            report(
+                "error",
+                "shape-frontmatter-value",
+                f"{field} is `{held}`, which the contract does not name (its values are "
+                f"{', '.join(allowed)}); a value outside that set answers no index question",
             )
 
     title = history_heading_text(contract)
@@ -851,7 +963,7 @@ def build_report(project_filter: Path | None) -> dict:
     closed = closed_kind_set()
     contract = document_shape_contract()
     current_skills, retired_skills = installer_skill_names()
-    has_agents_import = load_project_init_module().has_agents_import
+    project_init = load_project_init_module()
     version = repo_version()
 
     if project_filter is not None:
@@ -868,7 +980,7 @@ def build_report(project_filter: Path | None) -> dict:
                 contract,
                 current_skills,
                 retired_skills,
-                has_agents_import,
+                project_init,
             )
         )
         project_reports.append({"path": str(project), "findings": findings})

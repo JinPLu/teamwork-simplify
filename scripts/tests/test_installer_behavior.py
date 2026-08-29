@@ -18,7 +18,9 @@ from harness import (  # noqa: E402
     CODEX_POLICY_START,
     CURSOR_POLICY_END,
     CURSOR_POLICY_START,
-        ROOT,
+    PROJECT_END,
+    PROJECT_START,
+    ROOT,
     TeamworkCase,
     contract_document,
     digest,
@@ -318,13 +320,15 @@ class DoctorContractDriftTests(TeamworkCase):
         self.install_ok("--project-root", str(project), "init-project")
         return project
 
-    def write_documents(self, project: Path, *relatives: str) -> None:
+    def write_documents(
+        self, project: Path, *relatives: str, status: str | None = None
+    ) -> None:
         """Contract-shaped documents, so only index drift can report here."""
         contract = load_doctor().document_shape_contract()
         for relative in relatives:
             self.write(
                 project / "docs" / "teamwork" / relative,
-                contract_document(contract, subject=relative),
+                contract_document(contract, subject=relative, status=status),
             )
 
     def write_index(self, project: Path, *relatives: str) -> None:
@@ -388,9 +392,9 @@ class DoctorContractDriftTests(TeamworkCase):
         self.assertEqual([item["check"] for item in findings], ["index-unregistered"])
         self.assertIn("plans/unlisted.md", findings[0]["message"])
         self.assertNotIn("records/kept.md", findings[0]["message"])
-        # Severity is behavior, not labelling: the session-start hook prints
-        # errors only, so a pre-contract document staying a warning is what
-        # keeps an unmigrated project from shouting on every start.
+        # Severity is behavior, not labelling: the next write refreshes the
+        # index line in the same turn, so an unindexed document is a missed
+        # refresh, not a broken tree, and it must not outrank a dead entry.
         self.assertEqual(findings[0]["severity"], "warn")
 
     def test_an_index_that_matches_disk_reports_nothing(self) -> None:
@@ -410,14 +414,120 @@ class DoctorContractDriftTests(TeamworkCase):
         self.assertEqual([item["check"] for item in findings], ["kind-outside-contract"])
         self.assertIn("notes", findings[0]["message"])
 
-    def test_a_project_with_no_readme_index_reports_no_drift(self) -> None:
-        # docs/teamwork/README.md is init-project's own navigation convenience,
-        # not a contract requirement (see policy/teamwork-global.md): a project
-        # that never had one, or dropped it, is not in drift for that alone.
+    def test_a_project_with_no_readme_index_is_reported_missing(self) -> None:
+        # The reading side has one entry point. Without it nothing points a
+        # session at what the project already decided, and the documents on
+        # disk are unreachable in practice.
         project = self.initialized_project()
         self.write_documents(project, "records/kept.md")
         (project / "docs" / "teamwork" / "README.md").unlink()
 
+        findings = self.doctor(project)
+
+        self.assertEqual([item["check"] for item in findings], ["index-missing"])
+        self.assertEqual(findings[0]["severity"], "error")
+
+        # ...and the command the finding names actually clears it.
+        self.install_ok("--project-root", str(project), "init-project")
+        self.assertEqual(
+            [item["check"] for item in self.doctor(project)], ["index-unregistered"]
+        )
+
+    def test_a_managed_block_from_an_older_release_is_reported_stale(self) -> None:
+        project = self.initialized_project()
+        agents = project / "AGENTS.md"
+        before, inside, after = split_managed(
+            agents.read_text(encoding="utf-8"), PROJECT_START, PROJECT_END
+        )
+        label = [line for line in inside.splitlines() if "Project label:" in line]
+        self.assertEqual(len(label), 1, inside)
+        # An older release's block: the same markers and label, a body this
+        # version no longer writes.
+        aged = f"\n## Teamwork Project Instructions\n\n{label[0]}\n- Some earlier wording.\n"
+        agents.write_text(
+            before + PROJECT_START + aged + PROJECT_END + after, encoding="utf-8"
+        )
+
+        findings = self.doctor(project)
+
+        self.assertEqual([item["check"] for item in findings], ["block-stale"])
+        self.assertEqual(findings[0]["severity"], "error")
+
+        self.install_ok("--project-root", str(project), "init-project")
+        self.assertEqual(self.doctor(project), [])
+
+    def test_a_project_label_of_its_own_choosing_is_not_reported_stale(self) -> None:
+        # The criterion is the block this version writes for the label the
+        # block already carries -- not for the directory name, which would
+        # report every project that named itself something else.
+        project = self.initialized_project()
+        agents = project / "AGENTS.md"
+        text = agents.read_text(encoding="utf-8")
+        _before, inside, _after = split_managed(text, PROJECT_START, PROJECT_END)
+        label = [line for line in inside.splitlines() if "Project label:" in line][0]
+        agents.write_text(
+            text.replace(label, "- Project label: `a-name-of-its-own`."), encoding="utf-8"
+        )
+
+        self.assertEqual(self.doctor(project), [])
+
+    def test_a_bridge_without_the_readme_import_is_reported_unreachable(self) -> None:
+        project = self.initialized_project()
+        # A CLAUDE.md that reaches the project block but never the reading side.
+        self.write(project / "CLAUDE.md", "# Notes\n\n@AGENTS.md\n")
+
+        findings = self.doctor(project)
+
+        self.assertEqual([item["check"] for item in findings], ["host-unreachable"])
+        self.assertEqual(findings[0]["severity"], "error")
+
+        self.install_ok("--project-root", str(project), "init-project")
+        self.assertEqual(self.doctor(project), [])
+
+    def test_a_status_outside_the_contract_values_is_an_error(self) -> None:
+        project = self.initialized_project()
+        self.write_documents(project, "records/finished.md", status="done")
+
+        findings = self.doctor(project)
+
+        self.assertEqual([item["check"] for item in findings], ["shape-frontmatter-value"])
+        self.assertEqual(findings[0]["severity"], "error")
+        self.assertIn("records/finished.md", findings[0]["message"])
+
+    def test_a_superseded_document_leaves_the_index_but_stays_on_disk(self) -> None:
+        contract = load_doctor().document_shape_contract()
+        retired = contract["lifecycle_values"][1]
+        project = self.initialized_project()
+        self.write_documents(project, "records/kept.md")
+        self.write_documents(project, "records/retired.md", status=retired)
+        self.write_index(project, "records/kept.md")
+
+        # Unindexed and inactive is exactly right: nothing is reported.
+        self.assertEqual(self.doctor(project), [])
+
+        # Listed anyway, it costs every session context for nothing.
+        self.write_index(project, "records/kept.md", "records/retired.md")
+        findings = self.doctor(project)
+        self.assertEqual([item["check"] for item in findings], ["index-lists-inactive"])
+        self.assertEqual(findings[0]["severity"], "warn")
+        self.assertIn("records/retired.md", findings[0]["message"])
+
+    def test_an_index_past_the_budget_is_reported(self) -> None:
+        budget = load_doctor().INDEX_ENTRY_BUDGET
+        project = self.initialized_project()
+        names = [f"records/subject-{number:03d}.md" for number in range(budget + 1)]
+        self.write_documents(project, *names)
+        self.write_index(project, *names)
+
+        findings = self.doctor(project)
+
+        self.assertEqual([item["check"] for item in findings], ["index-oversized"])
+        self.assertEqual(findings[0]["severity"], "warn")
+
+        # One fewer entry is inside the budget and reports nothing.
+        self.write_documents(project, *names[:-1])
+        (project / "docs" / "teamwork" / names[-1]).unlink()
+        self.write_index(project, *names[:-1])
         self.assertEqual(self.doctor(project), [])
 
     def test_doctor_never_exits_2_from_contract_parsing_on_a_real_project(self) -> None:

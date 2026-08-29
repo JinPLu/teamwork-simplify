@@ -13,7 +13,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from harness import (  # noqa: E402
     PROJECT_END,
     PROJECT_START,
-    ROOT,
     TeamworkCase,
     snapshot,
     split_managed,
@@ -95,9 +94,7 @@ class ProjectInitTests(TeamworkCase):
             len(placeholders), 1, f"seeded section has no placeholder line:\n{after}"
         )
 
-    def test_a_filled_in_constraints_seed_survives_initialize_and_refresh_context(
-        self,
-    ) -> None:
+    def test_a_filled_in_constraints_seed_survives_a_later_initialize(self) -> None:
         project = self.project()
         self.init_ok(project)
         agents_path = project / "AGENTS.md"
@@ -111,21 +108,7 @@ class ProjectInitTests(TeamworkCase):
 
         self.init_ok(project)
         self.assertEqual(agents_path.read_text(encoding="utf-8"), filled)
-
-        # refresh-context is not exposed through install.sh; run the real
-        # script directly for this leg, same as init-project.sh would.
-        refreshed = subprocess.run(
-            [
-                sys.executable,
-                str(ROOT / "scripts" / "init-project-files.py"),
-                "--project-root",
-                str(project),
-                "refresh-context",
-            ],
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
+        self.init_ok(project)
         self.assertEqual(agents_path.read_text(encoding="utf-8"), filled)
 
     def test_init_keeps_the_managed_block_single_and_leaves_the_rest_alone(self) -> None:

@@ -4,12 +4,11 @@ set -euo pipefail
 TEAMWORK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_ROOT_INPUT="$PWD"
 PROJECT_ROOT=""
-FULL_BOOTSTRAP=0
 
 usage() {
   cat <<'USAGE'
 Usage:
-  ./scripts/init-project.sh [--project-root PATH] [--full-bootstrap]
+  ./scripts/init-project.sh [--project-root PATH]
 
 Create or refresh one concise managed Teamwork block in AGENTS.md, plus the
 small managed CLAUDE.md import that lets a host which reads CLAUDE.md load it.
@@ -24,10 +23,6 @@ while [[ $# -gt 0 ]]; do
       [[ $# -ge 2 ]] || { echo "--project-root requires a path." >&2; exit 2; }
       PROJECT_ROOT_INPUT="$2"
       shift 2
-      ;;
-    --full-bootstrap)
-      FULL_BOOTSTRAP=1
-      shift
       ;;
     -h|--help)
       usage
@@ -54,11 +49,7 @@ project_files() {
 PROJECT_ROOT="$(project_files print-root)"
 project_files preflight
 
-write_args=(initialize)
-if (( FULL_BOOTSTRAP == 1 )); then
-  write_args+=(--full-bootstrap)
-fi
-project_files "${write_args[@]}"
+project_files initialize
 project_files validate
 
 echo "Teamwork project init complete: $PROJECT_ROOT"

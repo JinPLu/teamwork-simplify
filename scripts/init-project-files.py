@@ -183,7 +183,7 @@ def write_agents(root: Path, label: str) -> None:
     after = replace_block(before, managed_block(label))
     if MANAGED_START not in before:
         # Seed the placeholder once, for this project's own future edits, and
-        # never touch it again on later initialize/refresh-context runs.
+        # never touch it again on any later initialize run.
         after = seed_project_constraints(after)
     write_managed_file(path, before, after)
 
@@ -202,8 +202,8 @@ def bridge_links_to_agents(root: Path) -> bool:
     return True
 
 
-def has_agents_import(text: str) -> bool:
-    """True when an import of AGENTS.md is already active outside code."""
+def has_import(text: str, target: str) -> bool:
+    """True when an import of `target` is already active outside code."""
     fenced = False
     for line in text.splitlines():
         if line.strip().startswith("```"):
@@ -211,7 +211,7 @@ def has_agents_import(text: str) -> bool:
             continue
         if fenced:
             continue
-        if AGENTS_IMPORT in CODE_SPAN_RE.sub("", line):
+        if target in CODE_SPAN_RE.sub("", line):
             return True
     return False
 
@@ -222,7 +222,9 @@ def bridge_plan(root: Path) -> tuple[Path, str, str] | None:
         return None
     path = root / "CLAUDE.md"
     before = read_text(path)
-    include_agents_import = not has_agents_import(text_outside_bridge_block(before))
+    include_agents_import = not has_import(
+        text_outside_bridge_block(before), AGENTS_IMPORT
+    )
     after = replace_block(
         before, bridge_block(include_agents_import), BRIDGE_START, BRIDGE_END, ""
     )
@@ -251,7 +253,7 @@ def validate(root: Path) -> None:
     bridge = read_text(root / "CLAUDE.md")
     if bridge.count(BRIDGE_START) != bridge.count(BRIDGE_END) or bridge.count(BRIDGE_START) > 1:
         raise InitError("CLAUDE.md Teamwork bridge markers are ambiguous")
-    if not has_agents_import(bridge):
+    if not has_import(bridge, AGENTS_IMPORT):
         raise InitError("CLAUDE.md does not import AGENTS.md")
 
 
@@ -263,9 +265,6 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("preflight")
     initialize = sub.add_parser("initialize")
     initialize.add_argument("--project-label")
-    initialize.add_argument("--full-bootstrap", action="store_true")
-    refresh = sub.add_parser("refresh-context")
-    refresh.add_argument("--project-label")
     sub.add_parser("validate")
     return result
 
@@ -280,7 +279,7 @@ def main() -> int:
             text = read_text(root / "AGENTS.md")
             replace_block(text, managed_block(project_label(root, None)))
             bridge_plan(root)
-        elif arguments.action in {"initialize", "refresh-context"}:
+        elif arguments.action == "initialize":
             write_agents(root, project_label(root, arguments.project_label))
             write_claude_bridge(root)
             write_project_docs_readme(root)

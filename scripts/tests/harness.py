@@ -46,17 +46,22 @@ def contract_document(
     *,
     created: str = "2026-08-01",
     updated: str = "2026-08-02",
+    status: str | None = None,
     entry_dates: tuple[str, ...] = ("2026-08-01", "2026-08-02"),
     subject: str = "the fixture subject",
 ) -> str:
     """A document built to the shape contract doctor parses out of the policy.
 
     Fixtures are generated from that parse rather than from a hand-written copy
-    of the field names, so a contract edit moves every fixture with it.
+    of the field names and values, so a contract edit moves every fixture with it.
     """
-    dated = {"created": created, "updated": updated}
+    known = {
+        "created": created,
+        "updated": updated,
+        contract["lifecycle_field"]: status or contract["indexed_status"],
+    }
     frontmatter = "\n".join(
-        f"{field}: {dated.get(field, 'fixture')}" for field in contract["fields"]
+        f"{field}: {known.get(field, 'fixture')}" for field in contract["fields"]
     )
     history = "#" * contract["history_level"] + " " + contract["history_title"]
     marker = "#" * contract["entry_level"]
