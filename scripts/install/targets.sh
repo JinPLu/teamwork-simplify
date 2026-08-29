@@ -74,7 +74,6 @@ install_claude() {
   install_claude_agent_set "$agent_root" "user Claude Code"
   echo "Claude static skills/agents: installed"
   install_claude_global_policy
-  install_claude_session_hook
   write_source_pointer --host claude
 }
 
@@ -109,8 +108,11 @@ install_all() {
   install_claude_agent_set "$claude_agent_root" "user Claude Code"
   echo "Claude static skills/agents: installed"
   install_claude_global_policy
-  install_claude_session_hook
   write_source_pointer --host codex --host cursor --host claude
+}
+
+run_doctor() {
+  python3 "$ROOT/scripts/doctor.py" "$@"
 }
 
 install_update() {
@@ -133,6 +135,10 @@ install_update() {
     TEAMWORK_CODEX_PROFILE="$CODEX_PROFILE" \
       bash "$root/install.sh" "$host"
   done
+
+  echo
+  echo "Checking the installed surfaces and the projects that use them:"
+  run_doctor || true
 }
 
 init_project() {

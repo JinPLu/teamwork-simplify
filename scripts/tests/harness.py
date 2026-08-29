@@ -9,6 +9,7 @@ only run processes and describe bytes.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -18,6 +19,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+DOCTOR = ROOT / "scripts" / "doctor.py"
 
 CLAUDE_POLICY_START = "<!-- TEAMWORK_CLAUDE_GLOBAL_START -->"
 CLAUDE_POLICY_END = "<!-- TEAMWORK_CLAUDE_GLOBAL_END -->"
@@ -33,6 +35,45 @@ PROJECT_END = "<!-- TEAMWORK_PROJECT_END -->"
 POINTER_RELATIVE = ".teamwork/install.json"
 
 CHECKOUT_IGNORE = shutil.ignore_patterns(".git", "__pycache__", "*.pyc", ".DS_Store")
+
+
+def load_doctor():
+    """The real doctor module, so fixtures can reuse the contract it parses."""
+    spec = importlib.util.spec_from_file_location("teamwork_doctor_under_test", DOCTOR)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def contract_document(
+    contract: dict,
+    *,
+    created: str = "2026-08-01",
+    updated: str = "2026-08-02",
+    entry_dates: tuple[str, ...] = ("2026-08-01", "2026-08-02"),
+    subject: str = "the fixture subject",
+) -> str:
+    """A document built to the shape contract doctor parses out of the policy.
+
+    Fixtures are generated from that parse rather than from a hand-written copy
+    of the field names, so a contract edit moves every fixture with it.
+    """
+    dated = {"created": created, "updated": updated}
+    frontmatter = "\n".join(
+        f"{field}: {dated.get(field, 'fixture')}" for field in contract["fields"]
+    )
+    history = "#" * contract["history_level"] + " " + contract["history_title"]
+    marker = "#" * contract["entry_level"]
+    entries = "\n\n".join(
+        f"{marker} {date} - what changed\n\nthe delta for {date}." for date in entry_dates
+    )
+    return (
+        f"---\n{frontmatter}\n---\n\n"
+        f"# Fixture: {subject}\n\n"
+        f"- Subject identity: {subject}\n\n"
+        "The current synthesis.\n\n"
+        f"{history}\n\n{entries}\n"
+    )
 
 
 def digest(path: Path) -> str:

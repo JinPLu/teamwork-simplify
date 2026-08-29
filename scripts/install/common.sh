@@ -45,7 +45,7 @@ Usage:
     cursor|cursor-agents|cursor-policy|cursor-policy-copy
 
   ./install.sh [--copy|--link] \
-    claude|claude-agents|claude-policy|claude-hook
+    claude|claude-agents|claude-policy
 
   ./install.sh doctor [--project PATH] [--json]
   ./install.sh remove
@@ -85,17 +85,10 @@ Targets:
                  for the manual Settings -> Rules paste fallback
   claude-policy  Compatibility/development: print the canonical policy in its
                  Claude managed wrapper
-  claude-hook    Register the Teamwork SessionStart hook in
-                 ~/.claude/settings.json so each new session reports Teamwork
-                 errors for that project; this changes user configuration and
-                 says so when it runs
   doctor         Read-only health check of the installed surfaces and of every
                  project on this machine that carries a Teamwork block or a
                  docs/teamwork/ tree; writes nothing, exits non-zero when it
                  found an error. Accepts --project PATH and --json
-  remove         Remove the Teamwork-managed SessionStart hook entry from
-                 ~/.claude/settings.json. Skills, agents, and the managed
-                 policy blocks are left in place
 
 Default mode is --copy. Clone this repository and run ./install.sh <host>.
 Official support and release qualification are Codex-only. Use --link for local
@@ -136,7 +129,7 @@ teamwork_target_is_cursor_only() {
 
 teamwork_target_is_claude_only() {
   case "${1:-}" in
-    claude|claude-agents|claude-policy|claude-hook)
+    claude|claude-agents|claude-policy)
       return 0
       ;;
   esac

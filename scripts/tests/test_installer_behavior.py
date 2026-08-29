@@ -21,7 +21,9 @@ from harness import (  # noqa: E402
     POINTER_RELATIVE,
     ROOT,
     TeamworkCase,
+    contract_document,
     digest,
+    load_doctor,
     snapshot,
     split_managed,
 )
@@ -360,10 +362,12 @@ class DoctorContractDriftTests(TeamworkCase):
         return project
 
     def write_documents(self, project: Path, *relatives: str) -> None:
+        """Contract-shaped documents, so only index drift can report here."""
+        contract = load_doctor().document_shape_contract()
         for relative in relatives:
             self.write(
                 project / "docs" / "teamwork" / relative,
-                f"---\nstatus: active\n---\n\n# {relative}\n",
+                contract_document(contract, subject=relative),
             )
 
     def write_index(self, project: Path, *relatives: str) -> None:

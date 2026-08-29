@@ -10,8 +10,6 @@ source "$ROOT/scripts/install/policy.sh"
 source "$ROOT/scripts/install/profiles.sh"
 # shellcheck source=scripts/install/targets.sh
 source "$ROOT/scripts/install/targets.sh"
-# shellcheck source=scripts/install/hooks.sh
-source "$ROOT/scripts/install/hooks.sh"
 
 TARGET=""
 PROJECT_ROOT=""
@@ -75,7 +73,7 @@ while [[ $# -gt 0 ]]; do
       DOCTOR_ARGS=("$@")
       break
       ;;
-    codex|cursor|claude|all|update|init-project|codex-agents|cursor-agents|claude-agents|codex-policy|cursor-policy|cursor-policy-copy|claude-policy|claude-hook|remove)
+    codex|cursor|claude|all|update|init-project|codex-agents|cursor-agents|claude-agents|codex-policy|cursor-policy|cursor-policy-copy|claude-policy)
       if [[ -n "$TARGET" ]]; then
         echo "Specify only one install target." >&2
         usage
@@ -160,12 +158,6 @@ case "$EFFECTIVE_TARGET" in
     ;;
   claude-policy)
     write_teamwork_claude_global_policy
-    ;;
-  claude-hook)
-    install_claude_session_hook
-    ;;
-  remove)
-    remove_claude_session_hook
     ;;
   doctor)
     run_doctor "${DOCTOR_ARGS[@]+"${DOCTOR_ARGS[@]}"}"
