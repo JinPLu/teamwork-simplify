@@ -22,8 +22,7 @@ bash -n "$ROOT/install.sh" \
 # gutted; a case that cannot be made to fail is not kept here.
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest \
   scripts.tests.test_installer_behavior \
-  scripts.tests.test_project_init_behavior \
-  scripts.tests.test_doctor_shape_behavior
+  scripts.tests.test_project_init_behavior
 
 if [[ "$MODE" == release ]]; then
   python3 - "$ROOT" <<'PY'

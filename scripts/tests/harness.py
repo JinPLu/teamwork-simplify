@@ -8,8 +8,6 @@ only run processes and describe bytes.
 
 from __future__ import annotations
 
-import hashlib
-import importlib.util
 import os
 import shutil
 import subprocess
@@ -19,7 +17,6 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCTOR = ROOT / "scripts" / "doctor.py"
 
 CLAUDE_POLICY_START = "<!-- TEAMWORK_CLAUDE_GLOBAL_START -->"
 CLAUDE_POLICY_END = "<!-- TEAMWORK_CLAUDE_GLOBAL_END -->"
@@ -33,59 +30,11 @@ PROJECT_END = "<!-- TEAMWORK_PROJECT_END -->"
 CHECKOUT_IGNORE = shutil.ignore_patterns(".git", "__pycache__", "*.pyc", ".DS_Store")
 
 
-def load_doctor():
-    """The real doctor module, so fixtures can reuse the contract it parses."""
-    spec = importlib.util.spec_from_file_location("teamwork_doctor_under_test", DOCTOR)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def contract_document(
-    contract: dict,
-    *,
-    created: str = "2026-08-01",
-    updated: str = "2026-08-02",
-    status: str | None = None,
-    entry_dates: tuple[str, ...] = ("2026-08-01", "2026-08-02"),
-    subject: str = "the fixture subject",
-) -> str:
-    """A document built to the shape contract doctor parses out of the policy.
-
-    Fixtures are generated from that parse rather than from a hand-written copy
-    of the field names and values, so a contract edit moves every fixture with it.
-    """
-    known = {
-        "created": created,
-        "updated": updated,
-        contract["lifecycle_field"]: status or contract["indexed_status"],
-    }
-    frontmatter = "\n".join(
-        f"{field}: {known.get(field, 'fixture')}" for field in contract["fields"]
-    )
-    history = "#" * contract["history_level"] + " " + contract["history_title"]
-    marker = "#" * contract["entry_level"]
-    entries = "\n\n".join(
-        f"{marker} {date} - what changed\n\nthe delta for {date}." for date in entry_dates
-    )
-    return (
-        f"---\n{frontmatter}\n---\n\n"
-        f"# Fixture: {subject}\n\n"
-        f"- Subject identity: {subject}\n\n"
-        "The current synthesis.\n\n"
-        f"{history}\n\n{entries}\n"
-    )
-
-
-def digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def snapshot(root: Path, skip: tuple[str, ...] = ()) -> dict[str, str]:
-    """Describe a tree by content, not by mtime: path -> kind + content hash."""
+def snapshot(root: Path, skip: tuple[str, ...] = ()) -> dict[str, str | bytes]:
+    """Describe a tree by content, not by mtime: path -> entry kind or raw file bytes."""
     root = Path(root)
     skipped = set(skip)
-    result: dict[str, str] = {}
+    result: dict[str, str | bytes] = {}
     for current, directories, files in os.walk(root, followlinks=False):
         here = Path(current)
         for name in list(directories):
@@ -107,7 +56,7 @@ def snapshot(root: Path, skip: tuple[str, ...] = ()) -> dict[str, str]:
             if path.is_symlink():
                 result[relative] = "link:" + os.readlink(path)
             else:
-                result[relative] = "file:" + digest(path)
+                result[relative] = path.read_bytes()
     return result
 
 

@@ -1,61 +1,26 @@
-# Cursor adapter
+# Cursor
 
 ```bash
 ./install.sh cursor
 ./install.sh cursor-policy
 ```
 
-`cursor` installs the Skill under `~/.cursor/skills/`. Invoke the Skill with `/teamwork-collaborate`; Codex
-uses `$teamwork-collaborate` instead. Policy activation is a separate step
-because Cursor keeps User Rules in its own settings store, not a file the
-installer owns: `./install.sh cursor-policy` prints the standing policy
-block (and tries to copy it to the clipboard) for a manual paste into
-Settings -> Rules -> User Rules; `./install.sh cursor-policy-copy` copies it
-without printing the confirmation instructions. The
-`TEAMWORK_CURSOR_GLOBAL_START` marker in that block is what keeps a repeat
-paste an update instead of a duplicate.
+The Skill is copied to `~/.cursor/skills/`; invoke `/teamwork-collaborate`.
+Paste the printed policy block into Settings → Rules → User Rules, replacing
+its previous Teamwork block. `cursor-policy-copy` copies the block without
+printing it. The installer cannot read Cursor's settings store to verify activation.
 
-Privacy Mode (Legacy) blocks Cursor's User Rule API, so the policy paste is
-not a usable path in that mode. The Skill is self-sufficient without it;
-the project `AGENTS.md` managed block is the minimum shared bridge. This is
-the one layer of Teamwork that can silently go stale — nothing detects a
-User Rule that was never pasted or that drifted from a later policy
-change, because the installer cannot read Cursor's User Rules back.
+A Cursor install also refreshes an existing Teamwork-managed Claude Skill root,
+because dual-host discovery can otherwise leave different copies available.
+Codex or Claude installs do not refresh Cursor's Skill root.
 
-When both `~/.cursor/skills/` and `~/.claude/skills/` hold the same
-Teamwork copy, which one Cursor reads is not guaranteed — keep both in
-sync. `./install.sh cursor` refreshes the Claude skill root when that copy
-is already present.
+For project setup, run:
 
-## Native capability mapping
+```bash
+./install.sh --project-root /absolute/project/path init-project
+```
 
-Cursor already has Plan, Debug, Explore, and `AskQuestion`. Teamwork does
-not add a second implementation of any of them:
-
-- **CreatePlan** and host Plan drafts are editable candidates; user
-  confirmation or Build is acceptance of a reusable plan, then the Skill's
-  persistence contract applies.
-- **Debug** intermediate hypotheses do not persist; a confirmed cause,
-  verified fix, or durable blocker does, through the Skill's own
-  persistence contract when that work was reached through
-  `teamwork-collaborate`.
-- **Explore** and **AskQuestion** handle live search and batched questions
-  directly; a question batch collects input and does not by itself create
-  a document. Neither reads `docs/teamwork/README.md` for you — open it
-  yourself before work that depends on what this project already decided,
-  concluded, or tried.
-- `.cursor/plans` remains the host editing surface. The global policy's
-  project-context contract owns when a write fires, which document kind it
-  belongs to, and the path it reuses (see README.md); a project's own
-  `AGENTS.md` Teamwork block only adds project-specific detail on top. Root
-  writes it
-  there. If the User Rule above is absent, the project `AGENTS.md` block is
-  still the minimum shared bridge.
-
-## Model tiers
-
-Teamwork installs no agents. A dispatch carries its model and reasoning
-effort in one value as `<model>[effort=...]`. Which tier a line gets is the
-global policy's delegation rules — weigh cost, speed, and quality by what
-that line actually needs. This file does not pin that to a model name or
-generation, since Cursor's own roster changes independently of this contract.
+The managed AGENTS.md block declares the project entry. Native Cursor modes,
+permissions and tools govern execution. Working agreements live in
+[the shared policy](policy/teamwork-global.md); [README](README.md) explains
+scope and [CONTRIBUTING](CONTRIBUTING.md) lists validation commands.

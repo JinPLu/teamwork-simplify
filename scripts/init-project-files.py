@@ -58,14 +58,10 @@ def managed_block(label: str) -> str:
         f"{MANAGED_START}\n"
         "## Teamwork Project Instructions\n\n"
         f"- Project label: `{label}`.\n"
-        "- Teamwork adds no required project-local workflow or state. It creates "
-        "no empty directory, schema, or mandatory stage chain. Native host modes "
-        "stay in charge. Follow this project's normal instructions and invoke a "
-        "named Skill only when its trigger matches.\n"
-        "- This project's Teamwork context lives under `docs/teamwork/` at the "
-        "repository root, with `docs/teamwork/README.md` as the reading-side "
-        "entry point; the global policy's project-context contract owns it, and "
-        "this block only adds project-specific detail.\n"
+        "- Shared working agreements come from the installed Teamwork global "
+        "policy; this block adds only project-specific context.\n"
+        "- Project context entry: `docs/teamwork/README.md` at this repository "
+        "root.\n"
         f"{MANAGED_END}\n"
     )
 
@@ -100,9 +96,6 @@ def bridge_block(include_agents_import: bool) -> str:
     return (
         f"{BRIDGE_START}\n"
         f"{agents_part}"
-        "<!-- The project's Teamwork reading-side entry point, loaded into every "
-        "session's context. -->\n"
-        f"{README_IMPORT}\n"
         f"{BRIDGE_END}\n"
     )
 
@@ -123,15 +116,11 @@ def text_outside_bridge_block(text: str) -> str:
 def project_docs_readme() -> str:
     return (
         "# Project Teamwork Documents\n\n"
-        "This is the project's Teamwork reading side: read it before work that "
-        "depends on what this project already decided, concluded, or tried.\n\n"
+        "Project context entry point.\n\n"
         "## Project current state\n\n"
-        "<!-- What is being worked on now, what has already been settled, and "
-        "where it is currently blocked. Keep this current here instead of "
-        "narrating it in chat. -->\n\n"
+        "<!-- Current conclusions and decisions relevant to future work. -->\n\n"
         "## Document index\n\n"
-        "<!-- One line per document: a link plus a one-sentence description, "
-        "grouped by kind under docs/teamwork/<kind>/. -->\n\n"
+        "<!-- Links to useful topic records. -->\n\n"
         "No documents yet.\n"
     )
 
@@ -233,15 +222,14 @@ def bridge_plan(root: Path) -> tuple[Path, str, str] | None:
 
 def write_claude_bridge(root: Path) -> None:
     if bridge_links_to_agents(root):
-        print(
-            f"Teamwork: {root / 'CLAUDE.md'} is a symlink to AGENTS.md, so "
-            "docs/teamwork/README.md is not auto-imported for this project."
-        )
         return
     planned = bridge_plan(root)
     if planned is None:
         return
     write_managed_file(*planned)
+    if has_import(text_outside_bridge_block(planned[2]), README_IMPORT):
+        print("Teamwork: the user-owned CLAUDE.md import of docs/teamwork/README.md "
+              "still loads the index automatically; left unchanged.")
 
 
 def validate(root: Path) -> None:

@@ -11,6 +11,9 @@
   progress; do not substitute one for the next real change or gate authorized
   work on it. Prefer the community's public implementation of a standard
   component; build your own only when that component is itself the work.
+- Verify the requested behavior with the nearest useful checks. After they
+  pass, broaden or repeat testing only for a new change, failure or unresolved
+  concern; do not turn scratch checks into permanent test scaffolding.
 
 ## Code
 
@@ -36,12 +39,13 @@
   Plans, documents, tests, and metrics record work; they do not replace
   visible progress. A delegated line's own report that it succeeded is not
   verification: check it on the real path before you carry it forward.
-- Report stage results in natural Chinese: what changed, the evidence, the
+- Give brief progress updates at key findings, direction changes and real
+  blockers. Report results in natural Chinese: what changed, the evidence, the
   unknowns, the next action or blocker. A diagram and running example are
   aids, not a gate — use them whenever they help follow a parameter flow,
   data flow, architecture, or causal story.
 
-## Delegation
+## Native execution
 
 - Clear work finishes natively. Name a Skill when the request matches its
   description. When you hand a slice to another agent, give it the objective,
@@ -51,79 +55,24 @@
 
 ## Project context
 
-A project's reusable context lives as plain Markdown under `docs/teamwork/`.
-It has a reading side and a writing side, and both are load-bearing.
-
-**Read it.** `docs/teamwork/README.md` is the entry point: the project's
-current state on top, a one-line-per-document index below. Read it before work
-that depends on what this project already decided, concluded, or tried, then
-follow the index into the few documents that matter rather than opening
-everything.
-
-**Write when the turn produced something the chat alone holds** — a conclusion,
-decision, plan, or observed number that could not be rebuilt without reading
-the conversation back, and that a later session will need. Write it in that
-same turn and refresh the README index line for it, creating that README when
-the project has none. Do not wait to be asked.
-
-**Do not write** what the repository already carries (code structure, interface
-signatures, git history, what `AGENTS.md` or `README.md` already says), what
-only matters inside this conversation (which step to do first, a scratch path,
-this turn's todo list), or what a later session could get by simply running
-something again.
-
-Pick the kind by the question the document answers:
-
-| The question it answers | Kind |
-| --- | --- |
-| Which way should we go? — options and trade-offs, nothing decided yet | `discussions/` |
-| What are we going to do? — direction settled, steps not yet carried out | `plans/` |
-| What came out of it? — a result, conclusion, verdict, or blocker reached | `records/` |
-| What did this trial measure? — one executed trial, its setup and its numbers | `experiments/` |
-| How is this done? — a procedure or reference kept current, no one-time outcome | `guides/` |
-
-A document answers one question. When it looks like two, pick the question a
-reader would most likely arrive with. These five are the closed set; nothing is
-written to the root of `docs/teamwork/` except `README.md`.
-
-**Same subject, same file.** Read the README index first, open only the few
-documents whose one-line description points at the same subject, and confirm
-against their identity line. On a match, append a dated History entry and
-refresh the top synthesis and `updated` — following `superseded-by` first when
-that file is superseded. With no match, create `docs/teamwork/<kind>/<name>.md`
-with a lowercase ASCII kebab-case name for that subject.
-
-**Index the active ones.** The README index lists the documents whose `status`
-is `active` — a document is active while a later session still needs to arrive
-at what it holds, which a finished result satisfies as much as open work does.
-When a successor takes over a subject, the old file becomes `status: superseded`
-with `superseded-by` naming it, and its index line goes away; the file stays on
-disk and `ls docs/teamwork/<kind>/` still finds it. The index rides in every
-session's context, so its length is a standing cost, not a per-read one.
-
-Every document has this shape:
-
-    ---
-    status: active | superseded
-    superseded-by:
-    created: <YYYY-MM-DD>
-    updated: <YYYY-MM-DD>
-    ---
-
-    # <Kind>: <subject>
-
-    - Subject identity: <the stable thing this file is about>
-
-    <the current synthesis — what holds now, kept rewritten to stay current>
-
-    ## History
-
-    ### <date — what changed semantically>
-
-    <the delta>
-
-History is append-only: a correction is a new dated entry, never an edit to an
-old one. Keep the user's own wording separate from your working understanding
-of it. No schema, JSON index, migration state, or readiness gate gates any of
-this; a project's `AGENTS.md` Teamwork block adds project-specific detail on
-top and does not restate the contract.
+- Before work that depends on a project's earlier decisions, conclusions or
+  attempts, read its `docs/teamwork/README.md` if present, then follow the
+  relevant links. An independent clear task needs no context survey.
+- Save a result in the same turn when a later session will need it and it
+  cannot be reconstructed from the repository without rereading this chat.
+  Do not duplicate code structure, git history, reproducible checks or transient
+  todos. Respect host write permissions; persist when writing is allowed.
+- Reuse the existing file for the same subject and update its current synthesis.
+  Keep consequential user goals, decisions, constraints, rejection reasons and
+  corrections verbatim, separate from the agent's concise interpretation and
+  evidence. Preserve existing history; record the date and reason of important
+  decision changes, not every wording edit.
+- Keep a short current state and links to still-useful records in the README;
+  create it with the first saved result if absent, and update the relevant index
+  entry when writing. The index is curated, not an inventory of every file.
+  Old metadata does not determine whether a record belongs in it.
+- Use plain Markdown and existing project organization. The default folders are
+  `discussions/`, `plans/`, `records/`, `experiments/` and `guides/` under
+  `docs/teamwork/`; these are conventions, not a closed set. No fixed title,
+  frontmatter or History section is required. Keep existing paths; do not
+  migrate old records merely to fit a template.

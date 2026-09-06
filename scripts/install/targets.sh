@@ -54,7 +54,7 @@ install_cursor() {
     echo "Both Teamwork skill roots were refreshed; when both exist, which copy wins is not guaranteed."
   fi
   echo "Cursor global policy activation: separate; this installer cannot reach Cursor's user-rule store."
-  echo "Exact action: run ./install.sh cursor-policy, then have a Cursor Agent add or update that block as one user rule and confirm it with a rule list readback."
+  echo "Exact action: run ./install.sh cursor-policy, then replace the Teamwork block in Settings -> Rules -> User Rules."
 }
 
 install_claude() {
@@ -84,7 +84,7 @@ install_all() {
   remove_retired_agent_files cursor "$HOME/.cursor/agents" "${RETIRED_CURSOR_AGENTS[@]}"
   echo "Cursor Skill: installed"
   echo "Cursor global policy activation: separate; this installer cannot reach Cursor's user-rule store."
-  echo "Exact action: run ./install.sh cursor-policy, then have a Cursor Agent add or update that block as one user rule and confirm it with a rule list readback."
+  echo "Exact action: run ./install.sh cursor-policy, then replace the Teamwork block in Settings -> Rules -> User Rules."
   install_skill_set "$HOME/.claude/skills" "Claude Code"
   remove_retired_agent_files claude "$HOME/.claude/agents" "${RETIRED_CLAUDE_AGENTS[@]}"
   echo "Claude Skill: installed"

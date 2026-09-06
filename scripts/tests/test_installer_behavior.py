@@ -22,9 +22,6 @@ from harness import (  # noqa: E402
     PROJECT_START,
     ROOT,
     TeamworkCase,
-    contract_document,
-    digest,
-    load_doctor,
     snapshot,
     split_managed,
 )
@@ -56,11 +53,11 @@ class RetiredCleanupTests(TeamworkCase):
         reviewer = self.write_agent(agents, "reviewer", "You review pull requests for my team.")
 
         before = {
-            "grill-me": digest(skills / "grill-me" / "SKILL.md"),
-            "notes": digest(notes),
-            "teamwork": digest(skills / "teamwork" / "SKILL.md"),
-            "checklist": digest(checklist),
-            "reviewer": digest(reviewer),
+            "grill-me": (skills / "grill-me" / "SKILL.md").read_bytes(),
+            "notes": (notes).read_bytes(),
+            "teamwork": (skills / "teamwork" / "SKILL.md").read_bytes(),
+            "checklist": (checklist).read_bytes(),
+            "reviewer": (reviewer).read_bytes(),
         }
 
         self.install_ok("claude")
@@ -71,11 +68,11 @@ class RetiredCleanupTests(TeamworkCase):
         self.assertEqual(
             before,
             {
-                "grill-me": digest(skills / "grill-me" / "SKILL.md"),
-                "notes": digest(notes),
-                "teamwork": digest(skills / "teamwork" / "SKILL.md"),
-                "checklist": digest(checklist),
-                "reviewer": digest(reviewer),
+                "grill-me": (skills / "grill-me" / "SKILL.md").read_bytes(),
+                "notes": (notes).read_bytes(),
+                "teamwork": (skills / "teamwork" / "SKILL.md").read_bytes(),
+                "checklist": (checklist).read_bytes(),
+                "reviewer": (reviewer).read_bytes(),
             },
         )
 
@@ -320,16 +317,9 @@ class DoctorContractDriftTests(TeamworkCase):
         self.install_ok("--project-root", str(project), "init-project")
         return project
 
-    def write_documents(
-        self, project: Path, *relatives: str, status: str | None = None
-    ) -> None:
-        """Contract-shaped documents, so only index drift can report here."""
-        contract = load_doctor().document_shape_contract()
+    def write_documents(self, project: Path, *relatives: str) -> None:
         for relative in relatives:
-            self.write(
-                project / "docs" / "teamwork" / relative,
-                contract_document(contract, subject=relative, status=status),
-            )
+            self.write(project / "docs" / "teamwork" / relative, "A useful result.\n")
 
     def write_index(self, project: Path, *relatives: str) -> None:
         lines = ["# Project Teamwork Documents\n", "\n## Document index\n\n"]
@@ -382,20 +372,6 @@ class DoctorContractDriftTests(TeamworkCase):
         self.assertIn("records/gone.md", findings[0]["message"])
         self.assertNotIn("records/kept.md", findings[0]["message"])
 
-    def test_a_document_the_index_never_registered_is_reported(self) -> None:
-        project = self.initialized_project()
-        self.write_documents(project, "records/kept.md", "plans/unlisted.md")
-        self.write_index(project, "records/kept.md")
-
-        findings = self.doctor(project)
-
-        self.assertEqual([item["check"] for item in findings], ["index-unregistered"])
-        self.assertIn("plans/unlisted.md", findings[0]["message"])
-        self.assertNotIn("records/kept.md", findings[0]["message"])
-        # Severity is behavior, not labelling: the next write refreshes the
-        # index line in the same turn, so an unindexed document is a missed
-        # refresh, not a broken tree, and it must not outrank a dead entry.
-        self.assertEqual(findings[0]["severity"], "warn")
 
     def test_an_index_that_matches_disk_reports_nothing(self) -> None:
         project = self.initialized_project()
@@ -404,15 +380,14 @@ class DoctorContractDriftTests(TeamworkCase):
 
         self.assertEqual(self.doctor(project), [])
 
-    def test_a_directory_outside_the_closed_kind_set_is_reported(self) -> None:
+    def test_custom_directories_and_unlisted_records_are_allowed(self) -> None:
         project = self.initialized_project()
         self.write_documents(project, "notes/idea.md", "records/kept.md")
         self.write_index(project, "records/kept.md")
 
         findings = self.doctor(project)
 
-        self.assertEqual([item["check"] for item in findings], ["kind-outside-contract"])
-        self.assertIn("notes", findings[0]["message"])
+        self.assertEqual(findings, [])
 
     def test_a_project_with_no_readme_index_is_reported_missing(self) -> None:
         # The reading side has one entry point. Without it nothing points a
@@ -427,11 +402,9 @@ class DoctorContractDriftTests(TeamworkCase):
         self.assertEqual([item["check"] for item in findings], ["index-missing"])
         self.assertEqual(findings[0]["severity"], "error")
 
-        # ...and the command the finding names actually clears it.
+        # Reinitializing restores the entry without imposing index completeness.
         self.install_ok("--project-root", str(project), "init-project")
-        self.assertEqual(
-            [item["check"] for item in self.doctor(project)], ["index-unregistered"]
-        )
+        self.assertEqual(self.doctor(project), [])
 
     def test_a_managed_block_from_an_older_release_is_reported_stale(self) -> None:
         project = self.initialized_project()
@@ -471,10 +444,9 @@ class DoctorContractDriftTests(TeamworkCase):
 
         self.assertEqual(self.doctor(project), [])
 
-    def test_a_bridge_without_the_readme_import_is_reported_unreachable(self) -> None:
+    def test_a_bridge_without_agents_import_is_reported_unreachable(self) -> None:
         project = self.initialized_project()
-        # A CLAUDE.md that reaches the project block but never the reading side.
-        self.write(project / "CLAUDE.md", "# Notes\n\n@AGENTS.md\n")
+        self.write(project / "CLAUDE.md", "# Notes\n")
 
         findings = self.doctor(project)
 
@@ -484,79 +456,7 @@ class DoctorContractDriftTests(TeamworkCase):
         self.install_ok("--project-root", str(project), "init-project")
         self.assertEqual(self.doctor(project), [])
 
-    def test_a_status_outside_the_contract_values_is_an_error(self) -> None:
-        project = self.initialized_project()
-        self.write_documents(project, "records/finished.md", status="done")
 
-        findings = self.doctor(project)
-
-        self.assertEqual([item["check"] for item in findings], ["shape-frontmatter-value"])
-        self.assertEqual(findings[0]["severity"], "error")
-        self.assertIn("records/finished.md", findings[0]["message"])
-
-    def test_a_superseded_document_leaves_the_index_but_stays_on_disk(self) -> None:
-        contract = load_doctor().document_shape_contract()
-        retired = contract["lifecycle_values"][1]
-        project = self.initialized_project()
-        self.write_documents(project, "records/kept.md")
-        self.write_documents(project, "records/retired.md", status=retired)
-        self.write_index(project, "records/kept.md")
-
-        # Unindexed and inactive is exactly right: nothing is reported.
-        self.assertEqual(self.doctor(project), [])
-
-        # Listed anyway, it costs every session context for nothing.
-        self.write_index(project, "records/kept.md", "records/retired.md")
-        findings = self.doctor(project)
-        self.assertEqual([item["check"] for item in findings], ["index-lists-inactive"])
-        self.assertEqual(findings[0]["severity"], "warn")
-        self.assertIn("records/retired.md", findings[0]["message"])
-
-    def test_an_index_past_the_budget_is_reported(self) -> None:
-        budget = load_doctor().INDEX_ENTRY_BUDGET
-        project = self.initialized_project()
-        names = [f"records/subject-{number:03d}.md" for number in range(budget + 1)]
-        self.write_documents(project, *names)
-        self.write_index(project, *names)
-
-        findings = self.doctor(project)
-
-        self.assertEqual([item["check"] for item in findings], ["index-oversized"])
-        self.assertEqual(findings[0]["severity"], "warn")
-
-        # One fewer entry is inside the budget and reports nothing.
-        self.write_documents(project, *names[:-1])
-        (project / "docs" / "teamwork" / names[-1]).unlink()
-        self.write_index(project, *names[:-1])
-        self.assertEqual(self.doctor(project), [])
-
-    def test_doctor_never_exits_2_from_contract_parsing_on_a_real_project(self) -> None:
-        # scripts/doctor.py reads policy/teamwork-global.md's kind table
-        # through this checkout's real path, not a fixture copy. A format
-        # change to that table (bullets -> table, as actually happened once)
-        # must degrade to a wrong finding, never crash the whole run with
-        # exit 2 -- that blind spot let validate.sh stay green while
-        # doctor.py was completely unable to run.
-        project = self.initialized_project()
-        done = subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "doctor.py"), "--project", str(project)],
-            capture_output=True,
-            text=True,
-            cwd=str(self.workdir),
-            env={
-                "HOME": str(self.home),
-                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-                "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
-                "LANG": "C",
-                "PYTHONDONTWRITEBYTECODE": "1",
-            },
-        )
-        self.assertIn(
-            done.returncode,
-            (0, 1),
-            f"doctor exited {done.returncode} (contract parsing likely failed)\n"
-            f"stdout:\n{done.stdout}\nstderr:\n{done.stderr}",
-        )
 
     def test_the_doctor_writes_nothing_while_reporting_drift(self) -> None:
         project = self.initialized_project()
@@ -570,6 +470,80 @@ class DoctorContractDriftTests(TeamworkCase):
         self.assertEqual(before_home, snapshot(self.home))
         self.assertEqual(before_project, snapshot(project))
 
+    def test_no_records_need_no_index(self) -> None:
+        project = self.initialized_project()
+        (project / "docs/teamwork/README.md").unlink()
+        self.assertEqual(self.doctor(project), [])
+
+    def test_document_content_and_root_placement_do_not_impose_a_schema(self) -> None:
+        project = self.initialized_project()
+        self.write(project / "docs/teamwork/2026-09-07-result.md",
+                   "---\nstatus: finished\ncustom: kept\n---\nA result without History.\n")
+        self.write_index(project, "2026-09-07-result.md")
+        self.assertEqual(self.doctor(project), [])
+
+    def test_index_checks_local_links_not_code_or_remote_urls(self) -> None:
+        project = self.initialized_project()
+        self.write_documents(project, "notes/a b.md")
+        self.write(project / "docs/teamwork/README.md",
+                   '[kept](<notes/a b.md#result>)\n'
+                   '[web](https://example.com/missing.md)\n'
+                   '[anchor](#section)\n`[example](missing.md)`\n'
+                   '```md\n[example](missing.md)\n```\n'
+                   '[broken](notes/absent.md#result)\n')
+        found = self.doctor(project)
+        self.assertEqual([x["check"] for x in found], ["index-dead-entry"])
+        self.assertIn("notes/absent.md", found[0]["message"])
+
+    def test_malformed_project_and_bridge_markers_are_reported(self) -> None:
+        project = self.initialized_project()
+        agents = project / "AGENTS.md"
+        agents.write_text(agents.read_text().replace(PROJECT_END, ""))
+        self.assertEqual([x["check"] for x in self.doctor(project)], ["block-malformed"])
+        self.write(project / "CLAUDE.md", "@AGENTS.md\n<!-- TEAMWORK_CLAUDE_BRIDGE_END -->\n")
+        self.assertEqual({x["check"] for x in self.doctor(project)}, {"block-malformed", "bridge-malformed"})
+
+    def global_report(self, project: Path) -> list[dict]:
+        done = self.install("doctor", "--project", str(project), "--json")
+        self.assertIn(done.returncode, (0, 1), done.stderr)
+        report = json.loads(done.stdout)
+        self.assertEqual(set(report), {"version", "checkout", "closed_kinds", "document_fields", "global", "projects", "summary"})
+        self.assertEqual(report["closed_kinds"], [])
+        self.assertEqual(report["document_fields"], [])
+        return report["global"]
+
+    def test_uninstalled_hosts_do_not_need_policy_blocks(self) -> None:
+        project = self.initialized_project()
+        self.assertFalse(any(x["severity"] == "error" for x in self.global_report(project)))
+        self.assertEqual(sum(x["check"] == "host-disabled" for x in self.global_report(project)), 2)
+
+    def test_global_missing_malformed_and_stale_blocks_are_distinct(self) -> None:
+        project = self.initialized_project()
+        self.install_ok("codex")
+        path = self.home / ".codex/AGENTS.md"
+        original = path.read_text()
+        cases = [
+            ("# User rules only\n", "policy-missing"),
+            (original.replace(CODEX_POLICY_END, ""), "policy-malformed"),
+            (CODEX_POLICY_END + "\n" + CODEX_POLICY_START + "\n", "policy-malformed"),
+            (original.replace("# Teamwork Global Policy", "# Earlier policy"), "policy-block"),
+        ]
+        for content, expected in cases:
+            with self.subTest(expected=expected):
+                path.write_text(content)
+                errors = [x for x in self.global_report(project) if x["severity"] == "error"]
+                self.assertEqual([x["check"] for x in errors], [expected])
+        path.write_text(original)
+        self.assertFalse(any(x["severity"] == "error" for x in self.global_report(project)))
+
+    def test_same_version_skill_content_drift_is_detected(self) -> None:
+        project = self.initialized_project()
+        self.install_ok("codex")
+        target = self.home / ".agents/skills/teamwork-collaborate/SKILL.md"
+        target.write_text(target.read_text() + "\nChanged local instruction.\n")
+        errors = [x for x in self.global_report(project) if x["severity"] == "error"]
+        self.assertEqual([x["check"] for x in errors], ["skill-content-drift"])
+        self.assertIn("SKILL.md", errors[0]["message"])
 
 class CommandLineTests(TeamworkCase):
     def rejected(self, *args: str) -> None:
@@ -589,6 +563,7 @@ class CommandLineTests(TeamworkCase):
         a_file.write_text("x\n", encoding="utf-8")
 
         self.rejected("bogus-target")
+        self.rejected("doctor", "--verbose")
         self.rejected("codex", "claude")
         # Flags and targets this release removed. They must not silently become
         # "unknown argument that happens to still work".

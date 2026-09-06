@@ -1,31 +1,16 @@
 # Contributing
 
-Keep changes small and behavior-led.
+Change the source that owns the behavior:
 
-- Edit `skills/teamwork-collaborate/SKILL.md` first; it is the sole owner of
-  the method.
-- Keep cross-project working rules in `policy/teamwork-global.md` only.
-- Preserve unknown user files in installer changes.
+- `skills/teamwork-collaborate/SKILL.md` owns the collaboration method.
+- `policy/teamwork-global.md` owns standing rules and project-context agreements.
+- `references/` holds optional examples, not a second rule source.
+- Host adapters document installation, permissions and entry points.
 
-Run the fast local smoke:
+Preserve unknown user files in installer changes. Test the real installation,
+initialization and diagnostic behavior; do not turn method wording into test
+assertions. Public docs explain outcomes and the three layers without copying
+the working rules. Local conversation records are not release inputs.
 
-```bash
-./scripts/validate.sh
-```
-
-Only explicit release preparation uses:
-
-```bash
-./scripts/validate.sh --release
-```
-
-Cross-project working rules — including the full project-context contract
-(when to read a project's `docs/teamwork/README.md`, and when a write fires,
-which kind it is, how a subject reuses a path, and the document shape) —
-belong only in `policy/teamwork-global.md`; do not
-duplicate them in the Skill body, role templates, tests, or host adapter
-docs (`CODEX.md`, `CURSOR.md`, `CLAUDE.md`), which may name host tools and
-installer mechanics but not restate a working rule. `README.md` owns why
-the standing-policy, on-demand-Skill, and project layers stay separate; it
-points at the policy-owned project-context contract rather than restating
-the closed document-kind set or the path shape.
+Run `./scripts/validate.sh` for local checks. Use `./scripts/validate.sh --release`
+only for explicit release preparation.

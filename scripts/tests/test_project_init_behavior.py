@@ -48,14 +48,14 @@ class ProjectInitTests(TeamworkCase):
         self.init_ok(project)
         self.assertEqual(first, snapshot(project))
 
-    def test_init_writes_a_claude_bridge_that_imports_both_agents_and_the_project_readme(
+    def test_init_writes_a_claude_bridge_without_auto_importing_the_index(
         self,
     ) -> None:
         project = self.project()
         self.init_ok(project)
         bridge = (project / "CLAUDE.md").read_text(encoding="utf-8")
         self.assertIn("@AGENTS.md", bridge)
-        self.assertIn("@docs/teamwork/README.md", bridge)
+        self.assertNotIn("@docs/teamwork/README.md", bridge)
 
     def test_init_leaves_an_existing_project_readme_untouched(self) -> None:
         project = self.project()
@@ -148,8 +148,7 @@ class ProjectInitTests(TeamworkCase):
         self.assertIn(original, text)
         # ...it is not duplicated by a second @AGENTS.md import...
         self.assertEqual(text.count("@AGENTS.md"), 1)
-        # ...and the README import, which has no other source, still lands.
-        self.assertIn("@docs/teamwork/README.md", text)
+        self.assertNotIn("@docs/teamwork/README.md", text)
         # Repeated deciding must change nothing further, byte for byte.
         stable = bridge.read_text(encoding="utf-8")
         self.init_ok(project)
@@ -165,7 +164,7 @@ class ProjectInitTests(TeamworkCase):
         self.init_ok(project)
         self.assertEqual(bridge.read_text(encoding="utf-8"), first)
 
-    def test_a_claude_md_symlinked_to_agents_reports_the_readme_import_limitation(
+    def test_a_claude_md_symlinked_to_agents_needs_no_bridge(
         self,
     ) -> None:
         project = self.project()
@@ -174,8 +173,7 @@ class ProjectInitTests(TeamworkCase):
         bridge.symlink_to(project / "AGENTS.md")
         done = self.init(project)
         self.assertEqual(done.returncode, 0, f"stdout:\n{done.stdout}\nstderr:\n{done.stderr}")
-        self.assertIn(str(bridge), done.stdout)
-        self.assertIn("docs/teamwork/README.md", done.stdout)
+        self.assertNotIn("not auto-imported", done.stdout)
         # The symlink itself is left exactly as it was: nothing can be added
         # to it without breaking it.
         self.assertTrue(bridge.is_symlink())
@@ -191,6 +189,25 @@ class ProjectInitTests(TeamworkCase):
         self.assert_bridge_decision(
             "# Notes\n\nAdd `@AGENTS.md` yourself one day.\n", expect_rewritten=True
         )
+
+    def test_refresh_removes_only_the_managed_index_import(self) -> None:
+        project = self.project()
+        self.write(project / "AGENTS.md", HEALTHY_AGENTS)
+        user = "# My instructions\n@docs/teamwork/README.md\n"
+        self.write(project / "CLAUDE.md", user +
+                   "<!-- TEAMWORK_CLAUDE_BRIDGE_START -->\n"
+                   "@AGENTS.md\n@docs/teamwork/README.md\n"
+                   "<!-- TEAMWORK_CLAUDE_BRIDGE_END -->\n")
+        done = self.init(project)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        text = (project / "CLAUDE.md").read_text()
+        self.assertTrue(text.startswith(user))
+        self.assertEqual(text.count("@docs/teamwork/README.md"), 1)
+        self.assertEqual(text.count("@AGENTS.md"), 1)
+        self.assertIn("user-owned", done.stdout)
+        before = snapshot(project)
+        self.init_ok(project)
+        self.assertEqual(before, snapshot(project))
 
     # ---- destructive inputs -------------------------------------------------
 

@@ -10,19 +10,13 @@ surfaces and never block Codex work.
 
 - Change `skills/teamwork-collaborate/SKILL.md` before workflow behavior.
   Public docs stay outcome-focused; they do not restate the method.
-- `policy/teamwork-global.md` exclusively owns cross-project working rules
-  that must hold before the Skill loads, plus the minimum routing,
-  delegation, and the full project-context contract — both sides of it:
-  when to read a project's `docs/teamwork/README.md`, and when a write
-  fires, which kind it is, how a subject reuses a path, and the document
-  shape. A rule the Skill body already carries does not belong there. Do
-  not duplicate a policy rule inside the Skill body, a test, or a host adapter doc (`CODEX.md` / `CURSOR.md` / `CLAUDE.md`) —
-  those may name host tools and installer mechanics, but the working rule
-  itself lives only in `policy/teamwork-global.md`. `README.md` owns the
-  three-layer split's rationale; it points at the policy-owned
-  project-context contract rather than restating the closed document-kind
-  set or the path shape. Commit a change to that file separately from a
-  release commit, carrying only the edits needed to keep the tree green.
+- `policy/teamwork-global.md` exclusively owns standing cross-project rules,
+  minimal native routing and the complete, concise project-context agreement.
+  The Skill owns the discussion and planning method; examples are optional.
+  Do not duplicate standing rules in the Skill, tests or host adapter docs.
+  Adapters describe installation, permissions and entry points. `README.md`
+  explains the three layers through user-visible outcomes. Keep policy edits
+  separate from a release commit when a release is requested.
 - The Code section's prohibition list in `policy/teamwork-global.md` is a
   frequency-ordered cache of observed agent failures, not a taxonomy. A new
   item enters only from a failure actually observed in this or another
@@ -33,7 +27,7 @@ surfaces and never block Codex work.
   and `description`, and `description` starts with `Use when`.
 - Teamwork installs no agents and no hooks, and adds no orchestration of its
   own. Execution runs on the host's own subagent and fan-out surfaces; the
-  method stops at the plan.
+  method delivers the requested assessment, decision or plan.
 - Project-local Teamwork setup is one concise managed `AGENTS.md` block plus
   a small `CLAUDE.md` import. It has no document database, schema, case
   lifecycle, or migration gate.
@@ -61,6 +55,6 @@ surfaces and never block Codex work.
 ## Teamwork Project Instructions
 
 - Project label: `teamwork-simplify`.
-- Teamwork adds no required project-local workflow or state. It creates no empty directory, schema, or mandatory stage chain. Native host modes stay in charge. Follow this project's normal instructions and invoke a named Skill only when its trigger matches.
-- This project's Teamwork context lives under `docs/teamwork/` at the repository root, with `docs/teamwork/README.md` as the reading-side entry point; the global policy's project-context contract owns it, and this block only adds project-specific detail.
+- Shared working agreements come from the installed Teamwork global policy; this block adds only project-specific context.
+- Project context entry: `docs/teamwork/README.md` at this repository root.
 <!-- TEAMWORK_PROJECT_END -->

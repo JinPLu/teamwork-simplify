@@ -1,35 +1,13 @@
----
-status: active
-superseded-by:
-created: <YYYY-MM-DD>
-updated: <YYYY-MM-DD>
----
-
 # Guide: <subject>
-
-- Subject identity: <the thing this procedure or reference governs>
-- Authoritative owner: <owner>
 
 ## Scope
 
-<what this covers, and what it deliberately leaves out>
+<Who uses this and for what task.>
 
-## Current procedure or reference
+## Procedure or reference
 
-<the steps to follow, or the reference material, as it stands now>
+<The current instructions and relevant inputs.>
 
-## Preconditions and inputs
+## Known limitations
 
-<what must hold or be available before following this>
-
-## Known failure modes
-
-<where this goes wrong, and how to tell>
-
-## History
-
-<Append only. A correction is a new dated entry, never an edit to an old one.>
-
-### <date — what changed semantically>
-
-<the delta>
+<Observed failure modes and how to recognize them.>

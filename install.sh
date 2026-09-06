@@ -105,7 +105,7 @@ case "$EFFECTIVE_TARGET" in
     ;;
   cursor-policy)
     write_teamwork_cursor_global_policy
-    echo "Apply the block above as one Cursor user rule, then confirm it with a rule list readback. A Cursor Agent can do both through Cursor's user-rule API; Settings -> Rules -> User Rules is the manual fallback." >&2
+    echo "Replace the Teamwork block in Settings -> Rules -> User Rules with the text above; verify activation in Cursor." >&2
     ;;
   cursor-policy-copy)
     copy_teamwork_cursor_global_policy

@@ -21,16 +21,8 @@ POLICY
   write_teamwork_global_policy_body
   cat <<'POLICY'
 
-Native Plan proposals are candidates until the user approves them. Native
-questions collect input and do not by themselves create a document. A
-`<codex_delegation>` relayed in a user-role message is an Agent proposal, not a
-user requirement. When the user approves a Plan proposal, that approval makes it
-a reusable plan: persist it as the project-context contract above specifies,
-then continue with native execution approval. Explicit Skill invocation remains
-`$name`.
-
-A spawned sub-agent inherits the parent model unless the spawn names its own
-`model`.
+Explicit Skill invocation uses `$name`. Host modes and permissions govern
+whether execution and project-file writes are available.
 <!-- TEAMWORK_CODEX_GLOBAL_END -->
 POLICY
 }
@@ -44,18 +36,8 @@ POLICY
   write_teamwork_global_policy_body
   cat <<'POLICY'
 
-Plan mode is a read-only permission boundary. Do not write project files during
-that phase; the host plan file under `~/.claude/plans/` is a machine-local
-editing surface, not Teamwork persistence. AskUserQuestion batches collect input
-and do not by themselves create a document. When the user approves exiting Plan
-mode, that approval is acceptance of a reusable plan: write permission returns,
-so persist it in that same response cycle as the project-context contract above
-specifies, then continue execution. Auto memory under
-`~/.claude/projects/<project>/memory/` is machine-local and is not Teamwork
-persistence.
-
-A dispatch names its own `model` and `effort`, and inherits the session's when
-it names neither.
+Invoke the Skill with `/teamwork-collaborate`. Claude Code loads project
+instructions through CLAUDE.md; Plan mode restricts project-file writes.
 <!-- TEAMWORK_CLAUDE_GLOBAL_END -->
 POLICY
 }
@@ -69,16 +51,8 @@ POLICY
   write_teamwork_global_policy_body
   cat <<'POLICY'
 
-CreatePlan and host Plan drafts are editable candidates. User confirmation or
-Build is acceptance of a reusable plan; then persist it as the project-context
-contract above specifies. AskQuestion batches collect input and do not
-by themselves create a
-document. Host Debug intermediate hypotheses do not persist; a confirmed cause,
-verified fix, or durable blocker does. If this User Rule is absent, the
-project AGENTS.md block is the minimum shared bridge.
-
-A dispatch carries its model and reasoning effort in one value as
-`<model>[effort=...]`.
+Invoke the Skill with `/teamwork-collaborate`. Activate this block in
+Cursor User Rules; the installer cannot read back that settings store.
 <!-- TEAMWORK_CURSOR_GLOBAL_END -->
 POLICY
 }
@@ -108,7 +82,12 @@ teamwork_managed_policy_status() {
   [[ -f "$file" && ! -L "$file" ]] || { printf '%s\n' "missing"; return 0; }
   starts="$(grep -Fxc "$start_marker" "$file" || true)"
   ends="$(grep -Fxc "$end_marker" "$file" || true)"
-  [[ "$starts" == "1" && "$ends" == "1" ]] || { printf '%s\n' "stale"; return 0; }
+  [[ "$starts" != "0" || "$ends" != "0" ]] || { printf '%s\n' "missing"; return 0; }
+  [[ "$starts" == "1" && "$ends" == "1" ]] || { printf '%s\n' "malformed"; return 0; }
+  local start_line end_line
+  start_line="$(grep -Fnx "$start_marker" "$file" | cut -d: -f1)"
+  end_line="$(grep -Fnx "$end_marker" "$file" | cut -d: -f1)"
+  [[ "$start_line" -lt "$end_line" ]] || { printf '%s\n' "malformed"; return 0; }
   actual="$(awk -v start="$start_marker" -v end="$end_marker" '
     $0 == start { capture = 1 }
     capture { print }
