@@ -27,11 +27,16 @@ into the requested outcome. Re-evaluate the trigger when the request changes.
    explain its effect and confirm only the affected decision. An independent
    read-only check of a consequential assumption is optional, never a gate.
 5. **Deliver the requested outcome.** An assessment or a decision can finish
-   the discussion. When a complex plan is requested, verify the facts it
-   depends on and specify the goal, boundaries, dependencies, outputs and
-   observable completion signals. Include shared writing paths and a launch
-   suggestion only when they help a real handoff; leave execution scheduling
-   to the host. Preserve decision continuity across any thread handoff.
+   the discussion. For a complex plan, explain the need, intended outcome and
+   recommended approach, then the concrete changes, dependencies and how to
+   verify the result end to end. Ground it in the relevant sources; name
+   critical files and existing functions to reuse when applicable. Describe
+   repeated changes once with representative paths. Keep it easy to scan
+   without omitting the inputs, outputs and constraints an executor needs.
+   Separate unresolved choices from settled decisions. Revise the current
+   approach when feedback changes it, keeping the steps consistent. Shared
+   writing paths and launch suggestions are useful only for a real handoff;
+   execution scheduling belongs to the host.
 6. **Close with what is settled, what remains open and the next authorized
    action.** Continue with authorized execution when the host permits it.
 
