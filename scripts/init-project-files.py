@@ -17,7 +17,6 @@ BRIDGE_START = "<!-- TEAMWORK_CLAUDE_BRIDGE_START -->"
 BRIDGE_END = "<!-- TEAMWORK_CLAUDE_BRIDGE_END -->"
 AGENTS_IMPORT = "@AGENTS.md"
 README_IMPORT = "@docs/teamwork/README.md"
-DOCS_README_RELATIVE = ("docs", "teamwork", "README.md")
 CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 CODE_SPAN_RE = re.compile(r"`[^`]*`")
 
@@ -60,8 +59,8 @@ def managed_block(label: str) -> str:
         f"- Project label: `{label}`.\n"
         "- Shared working agreements come from the installed Teamwork global "
         "policy; this block adds only project-specific context.\n"
-        "- Project context entry: `docs/teamwork/README.md` at this repository "
-        "root.\n"
+        "- Follow this project's designated knowledge owner and entry point; "
+        "use `docs/teamwork/README.md` only when no other convention is specified.\n"
         f"{MANAGED_END}\n"
     )
 
@@ -111,26 +110,6 @@ def text_outside_bridge_block(text: str) -> str:
         return text
     _inside, after = rest.split(BRIDGE_END, 1)
     return before + after
-
-
-def project_docs_readme() -> str:
-    return (
-        "# Project Teamwork Documents\n\n"
-        "Project context entry point.\n\n"
-        "## Project current state\n\n"
-        "<!-- Current conclusions and decisions relevant to future work. -->\n\n"
-        "## Document index\n\n"
-        "<!-- Links to useful topic records. -->\n\n"
-        "No documents yet.\n"
-    )
-
-
-def write_project_docs_readme(root: Path) -> None:
-    path = root.joinpath(*DOCS_README_RELATIVE)
-    if path.exists() or path.is_symlink():
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    write_managed_file(path, read_text(path), project_docs_readme())
 
 
 def replace_block(
@@ -270,7 +249,6 @@ def main() -> int:
         elif arguments.action == "initialize":
             write_agents(root, project_label(root, arguments.project_label))
             write_claude_bridge(root)
-            write_project_docs_readme(root)
             validate(root)
         else:
             validate(root)

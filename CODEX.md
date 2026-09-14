@@ -12,7 +12,8 @@ available for local development.
 
 Invoke the Skill with `$teamwork-collaborate`. Codex loads AGENTS.md as project
 instructions. Its native modes, tools and permissions govern execution.
-The project entry location is declared in the managed project block.
+The managed project block defers to the project's existing knowledge entry;
+initialization creates no document directory or empty index.
 
 Use `./install.sh doctor --project /absolute/project/path` to inspect the local
 installation and project links. Working agreements live in

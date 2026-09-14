@@ -20,7 +20,8 @@ For project setup, run:
 ./install.sh --project-root /absolute/project/path init-project
 ```
 
-The managed AGENTS.md block declares the project entry. Native Cursor modes,
+The managed AGENTS.md block defers to the project's existing knowledge entry;
+initialization creates no document directory or empty index. Native Cursor modes,
 permissions and tools govern execution. Working agreements live in
 [the shared policy](policy/teamwork-global.md); [README](README.md) explains
 scope and [CONTRIBUTING](CONTRIBUTING.md) lists validation commands.

@@ -395,15 +395,17 @@ class DoctorContractDriftTests(TeamworkCase):
         # disk are unreachable in practice.
         project = self.initialized_project()
         self.write_documents(project, "records/kept.md")
-        (project / "docs" / "teamwork" / "README.md").unlink()
 
         findings = self.doctor(project)
 
         self.assertEqual([item["check"] for item in findings], ["index-missing"])
         self.assertEqual(findings[0]["severity"], "error")
 
-        # Reinitializing restores the entry without imposing index completeness.
+        # Init maintains instructions, not knowledge content. The existing
+        # records still need their own entry after refreshing instructions.
         self.install_ok("--project-root", str(project), "init-project")
+        self.assertEqual([item["check"] for item in self.doctor(project)], ["index-missing"])
+        self.write_index(project, "records/kept.md")
         self.assertEqual(self.doctor(project), [])
 
     def test_a_managed_block_from_an_older_release_is_reported_stale(self) -> None:
@@ -472,7 +474,7 @@ class DoctorContractDriftTests(TeamworkCase):
 
     def test_no_records_need_no_index(self) -> None:
         project = self.initialized_project()
-        (project / "docs/teamwork/README.md").unlink()
+        self.assertFalse((project / "docs/teamwork").exists())
         self.assertEqual(self.doctor(project), [])
 
     def test_document_content_and_root_placement_do_not_impose_a_schema(self) -> None:

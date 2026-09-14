@@ -56,5 +56,5 @@ surfaces and never block Codex work.
 
 - Project label: `teamwork-simplify`.
 - Shared working agreements come from the installed Teamwork global policy; this block adds only project-specific context.
-- Project context entry: `docs/teamwork/README.md` at this repository root.
+- Follow this project's designated knowledge owner and entry point; use `docs/teamwork/README.md` only when no other convention is specified.
 <!-- TEAMWORK_PROJECT_END -->

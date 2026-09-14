@@ -35,14 +35,13 @@ class ProjectInitTests(TeamworkCase):
         done = self.init(project)
         self.assertEqual(done.returncode, 0, f"stdout:\n{done.stdout}\nstderr:\n{done.stderr}")
 
-    def test_init_creates_only_the_three_instruction_files_and_is_idempotent(self) -> None:
+    def test_init_creates_only_instruction_files_and_is_idempotent(self) -> None:
         project = self.project()
         self.init_ok(project)
         self.assertEqual(
             sorted(entry.name for entry in project.iterdir()),
-            ["AGENTS.md", "CLAUDE.md", "docs"],
+            ["AGENTS.md", "CLAUDE.md"],
         )
-        self.assertTrue((project / "docs" / "teamwork" / "README.md").is_file())
         first = snapshot(project)
         self.init_ok(project)
         self.init_ok(project)
@@ -73,11 +72,19 @@ class ProjectInitTests(TeamworkCase):
             custom,
         )
 
-    def test_init_does_not_precreate_kind_subdirectories(self) -> None:
+    def test_init_preserves_custom_knowledge_owner_without_creating_a_store(self) -> None:
         project = self.project()
+        rules = "# Project rules\nUse notes/ as the only durable memory; append dated notes.\n"
+        self.write(project / "AGENTS.md", rules)
+        note = self.write(project / "notes" / "paper.md", "# Reading\n\nOriginal note.\n")
+        original = note.read_bytes()
         self.init_ok(project)
-        docs = project / "docs" / "teamwork"
-        self.assertEqual(sorted(entry.name for entry in docs.iterdir()), ["README.md"])
+        first = snapshot(project)
+        self.init_ok(project)
+        self.assertEqual(first, snapshot(project))
+        self.assertTrue((project / "AGENTS.md").read_text().startswith(rules))
+        self.assertEqual(note.read_bytes(), original)
+        self.assertFalse((project / "docs").exists())
 
     def test_the_placeholder_constraints_section_is_seeded_outside_the_managed_block(
         self,
