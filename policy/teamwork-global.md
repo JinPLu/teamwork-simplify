@@ -41,7 +41,8 @@
   verification: check it on the real path before you carry it forward.
 - Give brief progress updates at key findings, direction changes and real
   blockers. Report results in natural Chinese: what changed, the evidence, the
-  unknowns, the next action or blocker. A diagram and running example are
+  unknowns, the next action or blocker. Use the field's common terms and
+  explain project codes and abbreviations at first use. A diagram and running example are
   aids, not a gate — use them whenever they help follow a parameter flow,
   data flow, architecture, or causal story.
 
@@ -68,11 +69,13 @@
 - Keep each subject's editable current judgment in its existing owning document;
   other documents link to it and retain only what their own readers need. Keep its
   goal, question relationships, settled and open choices, and next implications
-  at the top. Align the title and body with that current view, not just a new
-  summary above obsolete instructions. Read the current view first, then the
-  specific evidence or history needed for this task. Preserve frozen declarations,
-  source material and append-only records; add a dated correction or addendum
-  and make its effect discoverable from the current entry point.
+  at the top, and rewrite them, with the title and body, in place when a
+  decision or result changes them; a dated summary above an outdated view or a
+  per-edit History entry does not update it. Read the current view first, then
+  the specific evidence or history needed for this task. Only frozen
+  declarations, source material and records the project keeps append-only take
+  a dated correction or addendum; make its effect discoverable from the current
+  entry point.
 - When code, experiments, investigation or user feedback changes a premise,
   update the affected conclusion and its known uses in plans, summaries or other
   deliverables in the same work, even when no Skill is invoked. Keep consequential
@@ -84,12 +87,15 @@
   and proposals; a changed implementation does not by itself authorize a changed goal. Update
   the index only if its current state, relationships or entry need changing.
 - Preserve consequential user goals, decisions, constraints, rejection reasons
-  and corrections verbatim, with evidence sources and the date and reason of
-  important decision changes. Condense repetitive agent explanations while
-  keeping those facts, unresolved questions and still-useful reasoning. Separate
-  superseded reasoning from current guidance and preserve useful reference
-  anchors. Split out history only when it materially helps targeted reading;
-  do not create a new archive or record for every update.
+  and corrections verbatim and dated, beside the choice they govern, with
+  evidence sources and the reason of important decision changes; once
+  superseded, they leave the current view with that reason. Condense repetitive
+  agent explanations while keeping those facts, unresolved questions and
+  still-useful reasoning. Separate superseded reasoning from current guidance
+  and preserve useful reference anchors. Split out history only when it
+  materially helps targeted reading; do not create a new archive or record for
+  every update, and write a review or audit of an existing subject back into
+  that subject's document.
 - Keep the reason, object and applicable conditions of project-specific constraints
   with the decision they govern. An illustrative example does not set a new goal;
   a comparison's scope does not cancel another line of work. Reconsider

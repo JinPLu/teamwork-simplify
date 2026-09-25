@@ -47,9 +47,8 @@ Targets:
                  Rules activation action
   claude         Install the Skill and activate the managed Claude global policy
   all            Install for all three hosts
-  init-project   Add or refresh one project's Teamwork block in AGENTS.md, the
-                 small CLAUDE.md bridge, and docs/teamwork/README.md, without
-                 changing global settings
+  init-project   Add or refresh one project's Teamwork block in AGENTS.md and
+                 the small CLAUDE.md bridge, without changing global settings
   codex-policy   Print the canonical policy in its Codex managed wrapper
   cursor-policy  Print the Teamwork Cursor global policy block for one user rule
   cursor-policy-copy
@@ -105,7 +104,8 @@ teamwork_retired_reference_is_configured() {
   local relative="$2"
   case "$skill/$relative" in
     teamwork-collaborate/references|teamwork-collaborate/references/adversarial-search.md|\
-    teamwork-collaborate/references/experiment.md|teamwork-collaborate/agents|\
+    teamwork-collaborate/references/experiment.md|teamwork-collaborate/references/record.md|\
+    teamwork-collaborate/references/guide.md|teamwork-collaborate/agents|\
     teamwork-collaborate/agents/openai.yaml|\
     teamwork-debug/references|teamwork-debug/references/runtime-diagnosis.md|\
     teamwork-research/references|teamwork-research/references/deep-research.md|\
