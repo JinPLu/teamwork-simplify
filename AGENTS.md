@@ -12,16 +12,15 @@ surfaces and never block Codex work.
   Public docs stay outcome-focused; they do not restate the method.
 - `policy/teamwork-global.md` exclusively owns standing cross-project rules,
   minimal native routing and the complete, concise project-context agreement.
-  The Skill owns the discussion and planning method; examples are optional.
+  The Skill owns the discussion and planning method and has no reference files.
   Do not duplicate standing rules in the Skill, tests or host adapter docs.
   Adapters describe installation, permissions and entry points. `README.md`
   explains the three layers through user-visible outcomes. Keep policy edits
   separate from a release commit when a release is requested.
-- The Code section's prohibition list in `policy/teamwork-global.md` is a
-  frequency-ordered cache of observed agent failures, not a taxonomy. A new
-  item enters only from a failure actually observed in this or another
-  project; an item that stops recurring comes out. Keep it short enough that
-  every entry still competes for attention.
+- Standing guidance adds project knowledge and collaboration value without
+  taking over the host's execution, delegation, context or permission machinery.
+  Express engineering preferences through their actual purpose and conditions,
+  not blanket bans on useful implementation mechanisms.
 - Shell scripts use Bash with `set -euo pipefail`, quoted variables, and
   arrays. `skills/teamwork-collaborate/SKILL.md` frontmatter has only `name`
   and `description`, and `description` starts with `Use when`.

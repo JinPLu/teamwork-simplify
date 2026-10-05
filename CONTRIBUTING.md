@@ -4,7 +4,6 @@ Change the source that owns the behavior:
 
 - `skills/teamwork-collaborate/SKILL.md` owns the collaboration method.
 - `policy/teamwork-global.md` owns standing rules and project-context agreements.
-- `references/` holds optional examples, not a second rule source.
 - Host adapters document installation, permissions and entry points.
 
 Preserve unknown user files in installer changes. Test the real installation,

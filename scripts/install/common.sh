@@ -105,7 +105,8 @@ teamwork_retired_reference_is_configured() {
   case "$skill/$relative" in
     teamwork-collaborate/references|teamwork-collaborate/references/adversarial-search.md|\
     teamwork-collaborate/references/experiment.md|teamwork-collaborate/references/record.md|\
-    teamwork-collaborate/references/guide.md|teamwork-collaborate/agents|\
+    teamwork-collaborate/references/guide.md|teamwork-collaborate/references/discussion.md|\
+    teamwork-collaborate/references/plan.md|teamwork-collaborate/agents|\
     teamwork-collaborate/agents/openai.yaml|\
     teamwork-debug/references|teamwork-debug/references/runtime-diagnosis.md|\
     teamwork-research/references|teamwork-research/references/deep-research.md|\
