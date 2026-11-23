@@ -1,6 +1,6 @@
 ---
 name: teamwork-collaborate
-description: Use when weighing competing research or engineering directions, diagnosing ambiguous results across hypotheses, resolving design trade-offs, or turning settled choices into a multi-step plan where prior decisions and evidence continuity matter.
+description: Use when a research or engineering problem needs staged global-to-local decisions, competing-hypothesis discrimination, surgical revision under pushback, or turning settled branches into a living decision view and plan.
 ---
 
 # Evidence-Driven Collaboration
@@ -8,21 +8,22 @@ description: Use when weighing competing research or engineering directions, dia
 Apply only the moves needed for the current question; scale to the stakes rather than forcing a fixed interview or document template.
 
 ## 1. Anchor on Settled Ground
-- Check relevant project decisions, rejected paths and existing readouts before proposing a new mechanism, metric or configuration so prior failures are not repeated blindly.
-- Separate fixed goals from open branches: state what is currently uncertain and what downstream work actually changes depending on the answer. Gather checkable codebase, log or literature facts yourself; ask the user only where value judgments, goals or resource budgets genuinely diverge.
+- Check the owning document's settled boundaries, recorded rejections and existing readouts before proposing new mechanisms, metrics or configurations. Before comparing results across sources, verify both sides denote the same target object and contract.
+- Resolve checkable codebase, log and literature facts yourself first. An untested suspicion is something to inspect or test—not an option to hand the user. Answer requests to explain an existing design before pitching alternatives.
 
-## 2. Discriminate Between Competing Options
-- Compare meaningful options by mechanism, closest prior reference, remaining gap, cost and failure mode; mark unverified ideas clearly as your own proposals.
-- When a choice depends on an experiment or diagnostic check, design the smallest discriminating test and pre-commit the decision rule upfront—which observable outcome selects which option, and what falsifies the hypothesis—before running it.
+## 2. Stage Global → Local Decisions
+- Separate *necessary parts of the goal* from *competing alternatives within a part*. Lock goal framing, scope boundaries and upstream blocking premises before drilling into downstream mechanics.
+- Batch mutually independent user choices within the current layer and defer questions that depend on their answers. Downstream details may be explored conditionally under explicit assumptions, but never silently settle an unresolved upstream premise.
+- Contribute before asking: ask directly when user intent is ambiguous; when the option space is open, map distinct alternatives (mechanism, closest prior anchor where relevant, cost, failure mode) with a clear recommendation before asking, and mark unverified ideas as proposals.
 
-## 3. Revise Surgically Under Challenge
-- When the user objects or new evidence invalidates an assumption, name in one sentence the specific premise, constraint or criterion in dispute.
-- Reopen and update only the conclusions, comparisons and plan steps that depend on that premise; keep unrelated settled choices and user authorizations intact. Approving a recommendation covers only what was explicitly stated, and changing an implementation never silently changes the goal.
+## 3. Pre-Commit Discriminating Tests
+- When a choice depends on an experiment or diagnostic run—especially before scarce compute—state which decision or goal slot the readout serves, design the smallest discriminating test, and pre-commit the decision rule upfront (which observable outcome selects which option, and what falsifies the hypothesis).
+- Treat a mechanical smoke check as clearing runnability only, never as research or deliverable progress.
 
-## 4. Keep a One-Screen Decision Surface
-- When a topic spans turns or sessions, maintain a compact top view (~one screen) in its owning document: goal, active question, options with selection criteria, recommendation, what needs user decision, and dated user choices with their reasons.
-- Rewrite that view in place as choices settle: fold superseded options into one line (reason dropped and condition to reopen) instead of stacking dated addenda over stale text. When a readout changes, update the decisions, plans or tables that rely on it in the same turn.
+## 4. Revise Surgically Under Challenge
+- When the user objects or new evidence invalidates an assumption, identify the specific premise, constraint or criterion in dispute.
+- Reopen and update only the conclusions, comparisons and plan steps that depend on it; leave unrelated settled decisions, converged tracks and user authorizations intact. Approving a recommendation covers only its stated scope, and changing an implementation never silently alters the goal.
 
-## 5. Plan From Settled Branches
-- Derive plans from selected choices into outcome-sized steps in dependency order, stating protected behavior, observable completion signals and replan triggers.
-- Leave unresolved branches visible as explicit dependencies rather than assuming them away, and never treat a local diagnostic check as completing the full deliverable. Delegate execution, parallelism and verification to the host's native tools.
+## 5. Maintain a Living Topic View & Hand Off to Action
+- For topics spanning turns or sessions, keep a compact top view (~one screen) in the owning document showing the goal, live decision hierarchy (active branch, settled choices with user quotes/reasons, open upstream/downstream dependencies) and one-line folded superseded options (reason dropped and reopen condition).
+- Once direction is settled and authorized, exit directly into real action without extra ceremony. When planning from settled branches, derive outcome-sized steps in dependency order stating protected behavior, observable real-path completion signals and explicit links to unresolved branches rather than assuming them away; leave execution, parallelism and native plan modes to the host.

@@ -37,25 +37,6 @@ HOST_ALIASES = {
 }
 
 SEVERITY_ORDER = {"error": 0, "warn": 1, "info": 2}
-PRUNED_SCAN_DIRS = {
-    ".git",
-    "node_modules",
-    "__pycache__",
-    "venv",
-    ".venv",
-    "env",
-    "site-packages",
-    "target",
-    "build",
-    "dist",
-    "artifacts",
-    "outputs",
-    "backups",
-    "backup",
-    "_Archive",
-    "archive",
-    "Library",
-}
 EPHEMERAL_LINK_SEGMENTS = {
     "outputs",
     "artifacts",
@@ -66,7 +47,6 @@ EPHEMERAL_LINK_SEGMENTS = {
     "build",
     "dist",
 }
-MAX_SCAN_DEPTH = 4
 MARKDOWN_LINK_RE = re.compile(
     r'\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))(?:\s+"[^"\n]*")?\s*\)'
 )
@@ -90,7 +70,7 @@ Commands:
   refresh            Update only hosts where Teamwork is already installed
   uninstall          Remove Teamwork's Skill and managed policy block
   policy             Print (or copy with --clipboard) the canonical policy block
-  doctor             Read-only check of host installations and project links
+  doctor             Read-only check of installed hosts (and current directory / --project PATH when docs/teamwork/ exists)
 
 Options:
   --copy             Copy Skill files (default for new installs)
@@ -743,34 +723,6 @@ def check_project(project: Path) -> list[dict]:
     return sort_findings(findings)
 
 
-def discover_projects(scan_root: Path) -> list[Path]:
-    found: list[Path] = []
-    seen: set[Path] = set()
-
-    def add(candidate: Path) -> None:
-        resolved = candidate.resolve()
-        if resolved not in seen:
-            seen.add(resolved)
-            found.append(resolved)
-
-    add(REPO_ROOT)
-    if scan_root.is_dir():
-        base_depth = len(scan_root.parts)
-        for current, dirs, _files in os.walk(scan_root, followlinks=False):
-            here = Path(current)
-            depth = len(here.parts) - base_depth
-            dirs[:] = [
-                d
-                for d in dirs
-                if not d.startswith(".")
-                and d not in PRUNED_SCAN_DIRS
-                and depth < MAX_SCAN_DEPTH
-            ]
-            if (here / "docs" / "teamwork").is_dir():
-                add(here)
-    return sorted(found, key=str)
-
-
 def render_doctor(report: dict) -> str:
     lines = [f"Teamwork doctor — {report['checkout']} ({report['version']})", "", "GLOBAL"]
     for item in report["global"]:
@@ -808,7 +760,8 @@ def run_doctor(project_arg: str | None, as_json: bool) -> int:
             raise UsageError(f"not a directory: {project_path}")
         projects = [project_path.resolve()]
     else:
-        projects = discover_projects(Path.home() / "Documents")
+        cwd = Path.cwd().resolve()
+        projects = [cwd] if (cwd / "docs" / "teamwork").is_dir() else []
 
     global_findings = check_global_hosts(version, expected_block)
     project_reports = [

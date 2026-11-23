@@ -195,7 +195,7 @@ class DoctorTests(TeamworkCase):
         for broken_text, expected_check in (
             ("# Only user rules\n", "policy-missing"),
             (f"{POLICY_START}\nbroken\n", "policy-malformed"),
-            (original_policy.replace("Chinese", "French"), "policy-drift"),
+            (original_policy.replace(POLICY_END, f"- Drifted rule.\n{POLICY_END}", 1), "policy-drift"),
         ):
             with self.subTest(expected_check=expected_check):
                 policy_file.write_text(broken_text, encoding="utf-8")
@@ -258,22 +258,61 @@ class DoctorTests(TeamworkCase):
         )
         self.assertEqual(before_project, snapshot(project))
 
-    def test_auto_discovery_prunes_artifacts_backups_and_archives(self) -> None:
+    def test_default_doctor_checks_hosts_only_without_crawling_documents(self) -> None:
         docs = self.home / "Documents"
-        active = docs / "ActiveProject"
-        self.write(active / "docs" / "teamwork" / "README.md", "# Active\n")
-        for ignored in (
-            docs / "ActiveProject" / "artifacts" / "snap" / "docs" / "teamwork" / "orphan.md",
-            docs / "ActiveProject" / "build" / "backups" / "docs" / "teamwork" / "orphan.md",
-            docs / "_Archive" / "OldRepo" / "docs" / "teamwork" / "orphan.md",
-        ):
-            self.write(ignored, "# Snapshot\n")
+        self.write(docs / "ActiveProject" / "docs" / "teamwork" / "README.md", "# Active\n")
+        self.write(docs / "BrokenProject" / "docs" / "teamwork" / "orphan.md", "# Orphan\n")
 
+        self.cli_ok("agy")
         code, report = self.doctor_json()
         self.assertEqual(code, 0)
-        scanned = {p["path"] for p in report["projects"]}
-        self.assertIn(str(active.resolve()), scanned)
-        self.assertEqual(len(scanned), 2)  # ActiveProject + REPO_ROOT
+        self.assertEqual(report["summary"]["error"], 0)
+        self.assertEqual(report["summary"]["projects"], 0)
+        self.assertEqual(report["projects"], [])
+        global_hosts = {item["host"] for item in report["global"]}
+        self.assertEqual(global_hosts, {"antigravity", "codex", "claude", "cursor"})
+
+        text_out = self.cli_ok("doctor").stdout
+        self.assertIn("PROJECTS (0 checked, 0 with errors)", text_out)
+
+    def test_default_doctor_checks_cwd_only_when_docs_teamwork_exists(self) -> None:
+        # Without cwd/docs/teamwork, cwd is skipped cleanly.
+        code, report = self.doctor_json()
+        self.assertEqual(code, 0)
+        self.assertEqual(report["projects"], [])
+
+        # With a valid cwd/docs/teamwork, default doctor checks cwd.
+        self.write(self.workdir / "docs" / "teamwork" / "README.md", "# Current Project\n")
+        code, report = self.doctor_json()
+        self.assertEqual(code, 0)
+        self.assertEqual([p["path"] for p in report["projects"]], [str(self.workdir.resolve())])
+        self.assertEqual(report["projects"][0]["findings"], [])
+
+        # Broken link in cwd/docs/teamwork is reported by default doctor.
+        self.write(
+            self.workdir / "docs" / "teamwork" / "README.md",
+            "- [Missing](plans/missing.md)\n",
+        )
+        code, report = self.doctor_json()
+        self.assertEqual(code, 1)
+        self.assertEqual([p["path"] for p in report["projects"]], [str(self.workdir.resolve())])
+        self.assertEqual(
+            [f["check"] for f in report["projects"][0]["findings"]], ["dead-link"]
+        )
+
+        # Explicit --project checks only that project, ignoring cwd.
+        explicit = self.temp_dir("explicit-project")
+        code, report = self.doctor_json("--project", str(explicit))
+        self.assertEqual(code, 0)
+        self.assertEqual([p["path"] for p in report["projects"]], [str(explicit.resolve())])
+        self.assertEqual(report["projects"][0]["findings"], [])
+
+        self.write(explicit / "docs" / "teamwork" / "guides" / "setup.md", "# Setup\n")
+        self.write(explicit / "docs" / "teamwork" / "README.md", "- [Setup](guides/setup.md)\n")
+        code, report = self.doctor_json("--project", str(explicit))
+        self.assertEqual(code, 0)
+        self.assertEqual([p["path"] for p in report["projects"]], [str(explicit.resolve())])
+        self.assertEqual(report["projects"][0]["findings"], [])
 
 
 class CommandLineValidationTests(TeamworkCase):

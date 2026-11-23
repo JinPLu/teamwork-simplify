@@ -4,11 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-MODE="fast"
-if [[ "${1:-}" == "--release" || "${1:-}" == "--full" ]]; then
-  MODE="release"
-elif [[ -n "${1:-}" && "${1:-}" != "--fast" ]]; then
-  echo "Usage: ./scripts/validate.sh [--fast|--release]" >&2
+if [[ $# -gt 0 ]]; then
+  echo "Usage: ./scripts/validate.sh" >&2
   exit 2
 fi
 
@@ -49,4 +46,4 @@ PY
 
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_teamwork_behavior
 
-echo "OK: Teamwork validation ($MODE)"
+echo "OK: Teamwork validation"
