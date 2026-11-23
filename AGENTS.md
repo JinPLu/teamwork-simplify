@@ -1,59 +1,19 @@
-# teamwork-simplify Repository
+# Teamwork Repository Guidelines
 
-`skills/` is the source of truth: there is exactly one Skill,
-`teamwork-collaborate`, and its `SKILL.md` owns the method. Clear,
-authorized work stays native; the Skill adds only the method described by
-its own trigger. Cursor and Claude Code adapters are optional compatibility
-surfaces and never block Codex work.
+Every component in this repository must pass four checks in order:
+1. **Necessary** — drop multi-version shims, redundant wrappers and ceremony that hosts already solve.
+2. **Concise** — keep one authoritative source per concern with minimal token and code surface.
+3. **Native-first** — leave execution, planning modes, subagents/swarms, tools and permissions to the host.
+4. **Human-centered** — optimize for direct causal reasoning, low cognitive load, clear human authority over goals/spend, and zero-noise diagnostics.
 
-## Working Conventions
+## Architecture & Ownership
 
-- Change `skills/teamwork-collaborate/SKILL.md` before workflow behavior.
-  Public docs stay outcome-focused; they do not restate the method.
-- `policy/teamwork-global.md` exclusively owns standing cross-project rules,
-  minimal native routing and the complete, concise project-context agreement.
-  The Skill owns the discussion and planning method and has no reference files.
-  Do not duplicate standing rules in the Skill, tests or host adapter docs.
-  Adapters describe installation, permissions and entry points. `README.md`
-  explains the three layers through user-visible outcomes. Keep policy edits
-  separate from a release commit when a release is requested.
-- Standing guidance adds project knowledge and collaboration value without
-  taking over the host's execution, delegation, context or permission machinery.
-  Express engineering preferences through their actual purpose and conditions,
-  not blanket bans on useful implementation mechanisms.
-- Shell scripts use Bash with `set -euo pipefail`, quoted variables, and
-  arrays. `skills/teamwork-collaborate/SKILL.md` frontmatter has only `name`
-  and `description`, and `description` starts with `Use when`.
-- Teamwork installs no agents and no hooks, and adds no orchestration of its
-  own. Execution runs on the host's own subagent and fan-out surfaces; the
-  method delivers the requested assessment, decision or plan.
-- Project-local Teamwork setup is one concise managed `AGENTS.md` block plus
-  a small `CLAUDE.md` import. It has no document database, schema, case
-  lifecycle, or migration gate.
+- `policy/teamwork-global.md` owns standing cross-project preferences (reasoning expression, inline evidence bounds, resource/quota guardrails and zero-ceremony project continuity).
+- `skills/teamwork-collaborate/SKILL.md` owns the on-demand collaboration method for weighing competing hypotheses/directions, pre-committing discriminating tests, revising surgically under pushback, maintaining a one-screen decision surface and deriving plans from settled branches. Frontmatter contains only `name` and `description` (`description` starts with `Use when`), with no reference files or rigid document templates. Do not duplicate standing policy rules inside `SKILL.md`.
+- `scripts/teamwork.py` (invoked through `./install.sh`) owns host installation (`antigravity`/`agy`, `codex`, `claude`, `cursor`, `all`, `refresh`), `uninstall`, canonical `policy` output, and read-only `doctor` checks. Teamwork installs no agents, hooks or project-local boilerplate blocks.
+- `README.md` describes user-visible outcomes and CLI usage concisely without duplicating full policy or skill text.
 
-## Commands
+## Safety & Verification
 
-- Run `./scripts/validate.sh` for the small local smoke suite. Use
-  `./scripts/validate.sh --release` only for explicit release preparation.
-- `init-project` maintains the project instruction block;
-  To refresh an install, run `./install.sh <host>` again from the checkout
-  you want.
-
-## Releases
-
-- Release on `main` unless the user explicitly requests another Git
-  workflow.
-- VERSION consistency is checked by `./scripts/validate.sh`.
-- A release is complete only after the requested verification, commit, tag,
-  and any requested GitHub Release succeed. Cursor/Claude adapters and
-  project-local files are not release blockers.
-- Keep release notes short and describe user-visible behavior rather than
-  internal tests, gates, or version history.
-
-<!-- TEAMWORK_PROJECT_START -->
-## Teamwork Project Instructions
-
-- Project label: `teamwork-simplify`.
-- Shared working agreements come from the installed Teamwork global policy; this block adds only project-specific context.
-- Follow this project's designated knowledge owner and entry point; use `docs/teamwork/README.md` only when no other convention is specified.
-<!-- TEAMWORK_PROJECT_END -->
+- Never modify files or user text outside Teamwork's own `teamwork-collaborate` skill entry and `<!-- TEAMWORK_GLOBAL_START --> ... <!-- TEAMWORK_GLOBAL_END -->` managed block. Preflight all target hosts before writing so failed runs make no partial changes.
+- Run `./scripts/validate.sh` for behavior tests against throwaway `HOME` directories; use `./scripts/validate.sh --release` when preparing a tagged release on `main`.

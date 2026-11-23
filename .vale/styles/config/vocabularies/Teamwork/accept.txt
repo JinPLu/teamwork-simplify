@@ -1,8 +1,0 @@
-AGENTS.md
-Claude Code
-Codex
-Cursor
-SKILL.md
-Skill
-Skills
-Teamwork

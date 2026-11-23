@@ -1,9 +1,0 @@
-[files]
-extend-exclude = [
-    "plugins/**",
-    "docs/teamwork/**",
-]
-
-[default.extend-words]
-Teamwork = "Teamwork"
-llms = "llms"
